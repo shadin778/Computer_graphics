@@ -1,0 +1,1382 @@
+#include <GL/glut.h>
+#include <cmath>
+#include <cstdlib> // for rand()
+#include <algorithm> // for std::fmin, std::fmax
+
+// Global variables
+bool isDaytime_4 = true;
+bool isMorning_4= false;
+
+float trainX_4 = -320.0f; // Adjusted initial position to be fully off-screen for a smooth start
+float trainSpeed_4= 2.0f;
+float cloudPos_4 = 0.0f;
+float sunMoonPos_4 = 0.0f; // 0.0 means sun/moon is at its starting side, 1.0 means it's at the ending side
+float boatPos_4 = -150.0f;
+float boatSpee_4 = 1.0f;
+bool isRaining_4 = false;
+float windmillAngle_4 = 0.0f;
+
+bool showRainbow_4 = false;
+int rainbowTimer_4 = 0;
+
+
+
+// Airplane position and speed
+float airplanePos_4= 200.0f;
+float airplaneSpeed_4= 3.0f;
+float angle_4 = 0.0f;
+float airplaneX_4 = 100.0f;  // Adjust to your desired starting position
+float airplaneY_4 = 100.0f;
+
+
+// Additional boats
+float boat2Pos_4 = 1100.0f;    // Starting from the right
+float boat2Speed_4 = 0.8f;     // Slightly slower than main boat
+float boat3Pos_4 = -300.0f;    // Another boat starting from left
+float fasterBoatSpeed_4 = 1.2f;     // Use a separate variable for the third boat's speed
+
+//Car
+float car1X_4 = -200;  // Starts from the left, moves right
+float car2X_4 = 1000;  // Starts from the right, moves left
+
+
+// New global variables for lightning
+bool isLightning_4 = false;
+int lightningTimer_4 = 0; // Timer to control flash duration
+const int LIGHTNING_DURATION_4 = 100; // Flash duration in milliseconds (e.g., 100ms)
+
+struct Color {
+    float r, g, b;
+};
+
+
+// ----------- Day Colors -----------
+
+Color skyDay = {0.4f, 0.7f, 1.0f};          // Bright blue sky
+Color groundDay = {0.2f, 0.45f, 0.1f};      // Deep lush green
+Color riverColorDay = {0.05f, 0.3f, 0.6f};  // Deep river blue
+
+Color buildingColorDay = {0.27f, 0.51f, 0.71f};   // Steel Blue
+Color windowColorDay = {0.6f, 0.75f, 0.95f};      // Cool light blue
+
+// ----------- Night Colors -----------
+Color skyNight = {0.02f, 0.03f, 0.15f};        // Dark blue
+Color groundNight = {0.04f, 0.07f, 0.05f};     // Very dark green
+Color riverColorNight = {0.02f, 0.05f, 0.15f}; // Midnight blue
+
+Color buildingColorNight = {0.27f, 0.51f, 0.71f};  // Steel Blue
+Color windowColorNight = {0.95f, 0.85f, 0.3f};     // Warm yellow lights
+
+// ----------- Morning Colors -----------
+Color skyMorning = {0.0f, 0.0f, 0.0f};            // Placeholder
+Color groundMorning = {0.25f, 0.3f, 0.2f};         // Dewy dark green
+Color riverColorMorning = {0.15f, 0.25f, 0.45f};   // Bluish-violet
+
+Color buildingColorMorning = {0.27f, 0.51f, 0.71f}; // Steel Blue
+Color windowColorMorning = {0.7f, 0.6f, 0.8f};      // Soft lavender-blue
+
+
+struct Raindrop {
+    float x, y;
+    float speed;
+};
+
+#define MAX_RAINDROPS 200
+Raindrop raindrops[MAX_RAINDROPS];
+
+struct Star {
+    float x, y;
+    float size;
+};
+
+#define MAX_STARS 100
+Star stars[MAX_STARS];
+
+// Function to draw a filled circle
+void drawCircle_4(float cx, float cy, float r) {
+    glBegin(GL_TRIANGLE_FAN);
+    for (int i = 0; i <= 100; ++i) {
+        float theta = 2.0f * 3.1416f * i / 100;
+        float x = r * cos(theta);
+        float y = r * sin(theta);
+        glVertex2f(cx + x, cy + y);
+    }
+    glEnd();
+}
+
+// Function to draw a filled circle with specified color and segments
+void drawCircle_4(float cx, float cy, float r, int segments, Color c) {
+    glColor3f(c.r, c.g, c.b);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(cx, cy);
+    for (int i = 0; i <= segments; i++) {
+        float angle = 2.0f * M_PI * i / segments;
+        glVertex2f(cx + r * cosf(angle), cy + r * sinf(angle));
+    }
+    glEnd();
+}
+
+// New helper function to draw a 5-pointed star
+void drawFivePointedStar_4(float cx, float cy, float outerRadius, float innerRadius, Color c) {
+    glColor3f(c.r, c.g, c.b);
+    glBegin(GL_TRIANGLE_FAN);
+
+    // Center point for the star (optional, makes it easier to fill)
+    glVertex2f(cx, cy);
+
+    // Draw 10 vertices for a 5-pointed star (5 outer points, 5 inner points)
+    // Adjust angle to make the star upright
+    for (int i = 0; i <= 10; ++i) {
+        float angle = M_PI / 5.0f * i; // Angle for each segment (2 segments per point)
+        float r = (i % 2 == 0) ? outerRadius : innerRadius; // Alternate between outer and inner radius
+        glVertex2f(cx + r * cos(angle - M_PI / 2.0f), cy + r * sin(angle - M_PI / 2.0f)); // Rotate to start upright
+    }
+    glEnd();
+}
+
+void initRain_4() {
+    for (int i = 0; i < MAX_RAINDROPS; ++i) {
+        raindrops[i].x = rand() % 1000;
+        raindrops[i].y = rand() % 600;
+        raindrops[i].speed = 4.0f + (rand() % 5);
+    }
+}
+
+void initStars_4() {
+    for (int i = 0; i < MAX_STARS; ++i) {
+        stars[i].x = rand() % 1000;
+        stars[i].y = 200 + rand() % 400; // Stars primarily in the upper sky
+        stars[i].size = (rand() % 3) + 1.0f;
+    }
+}
+
+void drawRain_4() {
+    if (!isRaining_4) return;
+    glColor3f(0.8f, 0.8f, 1.0f); // Brighter blue for raindrops
+    glLineWidth(2);
+    glBegin(GL_LINES);
+    for (int i = 0; i < MAX_RAINDROPS; ++i) {
+        float x = raindrops[i].x;
+        float y = raindrops[i].y;
+        glVertex2f(x, y);
+        glVertex2f(x, y - 15); // Draw a slightly longer line for each drop
+    }
+    glEnd();
+    glLineWidth(1); // Reset line width
+}
+
+void drawStars_4() {
+    // Only draw stars if it's night and not morning
+    if (isDaytime_4 || isMorning_4) return;
+    glColor3f(1.0f, 1.0f, 1.0f); // White stars
+    glBegin(GL_POINTS);
+    for (int i = 0; i < MAX_STARS; ++i) {
+        glPointSize(stars[i].size);
+        glVertex2f(stars[i].x, stars[i].y);
+    }
+    glEnd();
+    glPointSize(1); // Reset point size
+}
+
+void updateRain_4() {
+    if (!isRaining_4) return;
+    for (int i = 0; i < MAX_RAINDROPS; ++i) {
+        raindrops[i].y -= raindrops[i].speed;
+        if (raindrops[i].y < 0) { // If raindrop goes off screen, reset it to the top
+            raindrops[i].x = rand() % 1000;
+            raindrops[i].y = 600;
+            raindrops[i].speed = 4.0f + (rand() % 5);
+        }
+    }
+}
+
+void drawSunMoon_4() {
+    if (isMorning_4) {
+        // Reddish/Orange sun for morning rise
+        // sunMoonPos goes from 0 (off-screen left) to 0.5 (mid-morning)
+        drawCircle_4(sunMoonPos_4 * 1000, 500, 40, 32, {1.0f, 0.6f, 0.2f}); // Orange/Red
+    } else if (isDaytime_4) {
+        // Yellow Sun for daytime, moves from right to left
+        // sunMoonPos goes from 0 (right) to 1 (left)
+        drawCircle_4(900 - sunMoonPos_4 * 800, 500, 40, 32, {1.0f, 0.95f, 0.3f}); // Bright Yellow Sun
+    } else { // Night
+        // Moon, moves from left to right
+        // sunMoonPos goes from 0 (left) to 1 (right)
+        drawCircle_4(100 + sunMoonPos_4* 800, 500, 35, 32, {0.95f, 0.95f, 0.9f}); // Bright Moon
+        // Craters on moon
+        drawCircle_4(110 + sunMoonPos_4 * 800, 510, 8, 16, {0.8f, 0.8f, 0.8f});
+        drawCircle_4(90 + sunMoonPos_4* 800, 490, 5, 16, {0.8f, 0.8f, 0.8f});
+    }
+}
+
+void drawClouds_4() {
+    for (int i = 0; i < 4; i++) {
+        float x = fmod(cloudPos_4 + i * 250, 1100) - 100; // Loop clouds horizontally
+        // Clouds can be slightly darker/more subtle in morning
+        Color cloudColor;
+        if (isMorning_4) {
+            cloudColor = {0.85f, 0.85f, 0.9f};
+        } else if (isDaytime_4) {
+            cloudColor = {0.95f, 0.95f, 1.0f};
+        } else {
+            cloudColor = {0.7f, 0.7f, 0.8f};
+        }
+
+        drawCircle_4(x, 450, 20, 16, cloudColor);
+        drawCircle_4(x + 15, 460, 25, 16, cloudColor);
+        drawCircle_4(x + 40, 450, 20, 16, cloudColor);
+        drawCircle_4(x + 25, 435, 25, 16, cloudColor);
+    }
+}
+
+void drawMountains_4() {
+    glBegin(GL_TRIANGLES);
+    // Adjust mountain color for morning
+    if (isMorning_4) {
+        glColor3f(0.15f, 0.25f, 0.15f); // Darker, silhouetted mountains for morning
+    } else if (isDaytime_4) {
+        glColor3f(0.25f, 0.4f, 0.2f); // Green mountains during day
+    } else {
+        glColor3f(0.1f, 0.15f, 0.1f); // Dark mountains at night
+    }
+
+
+    float base_y = 100.0f; // New base Y-coordinate for mountains
+    float peak_height_offset = 200.0f; // Height from base to peak
+
+    for (int i = 0; i < 5; i++) {
+        float x = i * 250 - 50; // Offset and spacing for mountains
+        glVertex2f(x, base_y);
+        glVertex2f(x + 125, base_y + peak_height_offset); // Peak
+        glVertex2f(x + 250, base_y);
+    }
+    glEnd();
+}
+
+void drawRainbow_4() {
+    if (!showRainbow_4) return;
+
+    float cx =460, cy=450; // Rainbow center
+    float radius = 100;
+
+    float colors[7][3] = {
+        {1.0, 0.0, 0.0},  // Red
+        {1.0, 0.5, 0.0},  // Orange
+        {1.0, 1.0, 0.0},  // Yellow
+        {0.0, 1.0, 0.0},  // Green
+        {0.0, 0.0, 1.0},  // Blue
+        {0.29, 0.0, 0.51},// Indigo
+        {0.56, 0.0, 1.0}  // Violet
+    };
+
+    for (int j = 0; j < 7; j++) {
+        glColor3f(colors[j][0], colors[j][1], colors[j][2]);
+        glBegin(GL_LINE_STRIP);
+        for (float i = 0; i <= 180; i += 1) {
+            float angle = i * 3.14159 / 180;
+            float x = cx + cos(angle) * (radius + j * 5);
+            float y = cy + sin(angle) * (radius + j * 5);
+            glVertex2f(x, y);
+        }
+        glEnd();
+    }
+}
+
+
+ void rainbowOff_4(int value) {
+    showRainbow_4 = false;
+    glutPostRedisplay();
+
+
+    }
+
+
+// Enhanced function to draw big visible hills
+void drawHills_4() {
+    glBegin(GL_TRIANGLES);
+
+    // Hill colors based on time
+    if (isMorning_4) {
+        glColor3f(0.2f, 0.3f, 0.2f); // Morning - dark green
+    } else if (isDaytime_4) {
+        glColor3f(0.3f, 0.5f, 0.25f); // Day - brighter green
+    } else {
+        glColor3f(0.15f, 0.2f, 0.15f); // Night - darker green
+    }
+
+    float hill_base = 200.0f;       // Slightly above ground level to make visible
+    float hill_height = 180.0f;     // Much taller hills
+
+    // Hill 1
+    glVertex2f(-200, hill_base);
+    glVertex2f(250, hill_base + hill_height);
+    glVertex2f(700, hill_base);
+
+    // Hill 2 (overlapping slightly)
+    glVertex2f(400, hill_base);
+    glVertex2f(800, hill_base + hill_height * 0.9f);
+    glVertex2f(1200, hill_base);
+
+    // Hill 3
+    glVertex2f(900, hill_base);
+    glVertex2f(1350, hill_base + hill_height * 0.8f);
+    glVertex2f(1800, hill_base);
+
+    glEnd();
+}
+
+// Function to draw a simple tree
+void drawTree_4(float x, float y) {
+    // Tree Trunk (Brown)
+    glColor3f(0.5f, 0.35f, 0.05f); // Brown color
+    glBegin(GL_QUADS);
+    glVertex2f(x - 10, y);
+    glVertex2f(x + 10, y);
+    glVertex2f(x + 10, y + 50);
+    glVertex2f(x - 10, y + 50);
+    glEnd();
+
+    // Tree Leaves (Green - a simple circle or multiple circles for a bushier look)
+    glColor3f(0.2f, 0.5f, 0.1f); // Darker green for leaves
+    drawCircle_4(x, y + 70, 30); // Top part of the tree
+    drawCircle_4(x - 15, y + 50, 25); // Left part
+    drawCircle_4(x + 15, y + 50, 25); // Right part
+}
+
+
+void drawWindmill_4() {
+    float x = 950;  // ✅ Near the right edge, but within view
+    float y = 185;
+
+    // Windmill tower
+    glBegin(GL_QUADS);
+    glColor3f(0.4f, 0.4f, 0.4f); // Grey tower
+    glVertex2f(x - 10, y);
+    glVertex2f(x + 10, y);
+    glVertex2f(x + 5, y + 200);
+    glVertex2f(x - 5, y + 200);
+    glEnd();
+
+    glPushMatrix();
+    glTranslatef(x, y + 200, 0); // Translate to pivot point for blades
+    glRotatef(windmillAngle_4, 0, 0, 1); // Rotate blades
+
+    // Blades
+    for (int i = 0; i < 4; i++) {
+        glRotatef(90, 0, 0, 1); // Rotate for each blade
+        glColor3f(0.7f, 0.7f, 0.7f); // Light grey blades
+        glBegin(GL_TRIANGLES);
+        glVertex2f(0, 0);
+        glVertex2f(50, 10);
+        glVertex2f(100, 0);
+        glEnd();
+    }
+
+    drawCircle_4(0, 0, 10, 16, {0.4f, 0.4f, 0.4f}); // Center hub
+    glPopMatrix();
+}
+// Function to draw seating zones with green colors
+void drawSeatingZones_4() {
+    // Seating zone 1 (left side) - Green grassy area
+    if (isMorning_4) {
+        glColor3f(0.3f, 0.5f, 0.2f); // Morning green
+    } else if (isDaytime_4) {
+        glColor3f(0.4f, 0.7f, 0.3f); // Day bright green
+    } else {
+        glColor3f(0.2f, 0.4f, 0.1f); // Night dark green
+    }
+    glBegin(GL_QUADS);
+    glVertex2f(50, 170);
+    glVertex2f(150, 170);
+    glVertex2f(150, 190);
+    glVertex2f(50, 190);
+    glEnd();
+
+    // Draw 3 benches in left seating area with more detail
+    for (int i = 0; i < 3; i++) {
+        float benchX= 60 + i*30;
+
+        // Bench seat (main part)
+        glColor3f(0.5f, 0.35f, 0.2f); // Wood color
+        glBegin(GL_QUADS);
+        glVertex2f(benchX, 175);
+        glVertex2f(benchX + 20, 175);
+        glVertex2f(benchX + 20, 180);
+        glVertex2f(benchX, 180);
+        glEnd();
+
+        // Bench back
+        glBegin(GL_QUADS);
+        glVertex2f(benchX, 180);
+        glVertex2f(benchX + 20, 180);
+        glVertex2f(benchX + 18, 185);
+        glVertex2f(benchX + 2, 185);
+        glEnd();
+
+        // Bench legs
+        glColor3f(0.4f, 0.3f, 0.15f); // Darker wood
+        glBegin(GL_LINES);
+        // Front legs
+        glVertex2f(benchX + 3, 170); glVertex2f(benchX + 3, 175);
+        glVertex2f(benchX + 17, 170); glVertex2f(benchX + 17, 175);
+        // Back legs
+        glVertex2f(benchX + 2, 180); glVertex2f(benchX + 2, 185);
+        glVertex2f(benchX + 18, 180); glVertex2f(benchX + 18, 185);
+        glEnd();
+    }
+
+    // Seating zone 2 (right side) - Green grassy area
+    if (isMorning_4) {
+        glColor3f(0.3f, 0.5f, 0.2f); // Morning green
+    } else if (isDaytime_4) {
+        glColor3f(0.4f, 0.7f, 0.3f); // Day bright green
+    } else {
+        glColor3f(0.2f, 0.4f, 0.1f); // Night dark green
+    }
+    glBegin(GL_QUADS);
+    glVertex2f(800, 170);
+    glVertex2f(900, 170);
+    glVertex2f(900, 190);
+    glVertex2f(800, 190);
+    glEnd();
+
+    // Draw 3 benches in right seating area with more detail
+    for (int i = 0; i < 3; i++) {
+        float benchX = 810 + i*30;
+
+        // Bench seat (main part)
+        glColor3f(0.5f, 0.35f, 0.2f); // Wood color
+        glBegin(GL_QUADS);
+        glVertex2f(benchX, 175);
+        glVertex2f(benchX + 20, 175);
+        glVertex2f(benchX + 20, 180);
+        glVertex2f(benchX, 180);
+        glEnd();
+
+        // Bench back
+        glBegin(GL_QUADS);
+        glVertex2f(benchX, 180);
+        glVertex2f(benchX + 20, 180);
+        glVertex2f(benchX + 18, 185);
+        glVertex2f(benchX + 2, 185);
+        glEnd();
+
+        // Bench legs
+        glColor3f(0.4f, 0.3f, 0.15f); // Darker wood
+        glBegin(GL_LINES);
+        // Front legs
+        glVertex2f(benchX + 3, 170); glVertex2f(benchX + 3, 175);
+        glVertex2f(benchX + 17, 170); glVertex2f(benchX + 17, 175);
+        // Back legs
+        glVertex2f(benchX + 2, 180); glVertex2f(benchX + 2, 185);
+        glVertex2f(benchX + 18, 180); glVertex2f(benchX + 18, 185);
+        glEnd();
+    }
+
+    // Draw some small green trees in seating areas
+    drawTree_4(70, 190); // Left seating area
+    drawTree_4(130, 190);
+    drawTree_4(820, 190); // Right seating area
+    drawTree_4(880, 190);
+}
+
+// Updated road with green borders
+void drawRoad_4() {
+    // Main road surface (gray)
+    glColor3f(0.2f, 0.2f, 0.2f); // Dark gray
+    glBegin(GL_QUADS);
+    glVertex2f(0, 150);
+    glVertex2f(1000, 150);
+    glVertex2f(1000, 185);
+    glVertex2f(0, 185);
+    glEnd();
+
+    // Green borders/verges - changes with time of day
+    if (isMorning_4) {
+        glColor3f(0.25f, 0.45f, 0.15f); // Morning green
+    } else if (isDaytime_4) {
+        glColor3f(0.35f, 0.65f, 0.25f); // Day bright green
+    } else {
+        glColor3f(0.15f, 0.35f, 0.1f); // Night dark green
+    }
+
+    // Left green verge
+    glBegin(GL_QUADS);
+    glVertex2f(0, 185);
+    glVertex2f(1000, 185);
+    glVertex2f(1000, 200);
+    glVertex2f(0, 200);
+    glEnd();
+
+    // Right green verge
+    glBegin(GL_QUADS);
+    glVertex2f(0, 140);
+    glVertex2f(1000, 140);
+    glVertex2f(1000, 150);
+    glVertex2f(0, 150);
+    glEnd();
+
+    // Lane markings (white)
+    glColor3f(1.0f, 1.0f, 1.0f);
+    for (int i = 0; i < 1000; i += 80) {
+        glBegin(GL_QUADS);
+        glVertex2f(i + 20, 165);
+        glVertex2f(i + 50, 165);
+        glVertex2f(i + 50, 170);
+        glVertex2f(i + 20, 170);
+        glEnd();
+    }
+
+    // Road edges (white lines)
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
+    glVertex2f(0, 150);
+    glVertex2f(1000, 150);
+    glVertex2f(0, 185);
+    glVertex2f(1000, 185);
+    glEnd();
+    glLineWidth(1.0f);
+}
+
+void drawLight_4(float x1, float y1, float x2, float y2) {
+    glColor3f(1.0f, 1.0f, 0.7f); // Soft yellow light
+    glBegin(GL_QUADS);
+    glVertex2f(x1, y1);
+    glVertex2f(x2, y1);
+    glVertex2f(x2, y2);
+    glVertex2f(x1, y2);
+    glEnd();
+}
+
+void drawBuilding_4(float x, float y, float width, float height) {
+    // Building structure
+    Color buildingColor;
+    Color windowColor;
+
+    if (isMorning_4) {
+        buildingColor = buildingColorMorning;
+        windowColor = windowColorMorning;
+    } else if (isDaytime_4) {
+        buildingColor = buildingColorDay;
+        windowColor = windowColorDay;
+    } else {
+        buildingColor= buildingColorNight;
+        windowColor = windowColorNight;
+    }
+
+    glColor3f(buildingColor.r, buildingColor.g, buildingColor.b);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+
+    // Window grid calculation based on building size
+    int rows = (int)(height / 40);
+    int cols = (int)(width / 50);
+
+    float winWidth = 20.0f;
+    float winHeight = 20.0f;
+    float xOffset = 15.0f;
+    float yOffset = 15.0f;
+
+    // Draw windows
+    glColor3f(windowColor.r, windowColor.g, windowColor.b);
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            float wx1 = x + xOffset + c * 40;
+            float wy1 = y + yOffset + r * 30;
+            float wx2 = wx1 + winWidth;
+            float wy2 = wy1 + winHeight;
+
+            glBegin(GL_QUADS);
+            glVertex2f(wx1, wy1);
+            glVertex2f(wx2, wy1);
+            glVertex2f(wx2, wy2);
+            glVertex2f(wx1, wy2);
+            glEnd();
+
+            // Lights are off during day and morning
+            if (!isDaytime_4 && !isMorning_4) {
+                drawLight_4(wx1, wy1, wx2, wy2);
+            }
+        }
+    }
+}
+
+// Draw multiple buildings with different sizes and positions
+void drawBuildings_4() {
+    drawBuilding_4(50, 185, 140, 320);    // Big building
+    drawBuilding_4(220, 185, 120, 280);   // Medium building
+    drawBuilding_4(370, 185, 100, 250);   // Smaller building
+    drawBuilding_4(500, 185, 160, 350);   // Very big building
+    drawBuilding_4(700, 185, 130, 300);   // Medium building
+}
+
+void drawHospital_4() {
+    float x = 650;
+
+    // Hospital structure
+    Color hospitalColor;
+if (isMorning_4) {
+    hospitalColor = {0.6f, 0.2f, 0.3f};  // Light Meherun for morning
+} else if (isDaytime_4) {
+    hospitalColor = {0.5f, 0.0f, 0.1f};  // Deep Meherun for day
+} else {
+    hospitalColor = {0.3f, 0.0f, 0.05f}; // Dark Meherun for night
+}
+
+    glColor3f(hospitalColor.r, hospitalColor.g, hospitalColor.b);
+    glBegin(GL_QUADS);
+    glVertex2f(x, 185); glVertex2f(x + 120, 185);
+    glVertex2f(x + 120, 360); glVertex2f(x, 360);
+    glEnd();
+
+    // Red cross
+    glColor3f(0.9f, 0.1f, 0.1f); // Bright red cross
+    glBegin(GL_QUADS);
+    glVertex2f(x + 50, 300); glVertex2f(x + 70, 300);
+    glVertex2f(x + 70, 340); glVertex2f(x + 50, 340);
+    glVertex2f(x + 40, 315); glVertex2f(x + 80, 315);
+    glVertex2f(x + 80, 325); glVertex2f(x + 40, 325);
+    glEnd();
+
+    // Windows
+    Color hospitalWindowColor;
+    if (isMorning_4) {
+        hospitalWindowColor = {0.5f, 0.7f, 0.9f};
+    } else if (isDaytime_4) {
+        hospitalWindowColor = {0.7f, 0.8f, 1.0f};
+    } else {
+        hospitalWindowColor = {0.9f, 0.9f, 0.2f};
+    }
+
+    glColor3f(hospitalWindowColor.r, hospitalWindowColor.g, hospitalWindowColor.b);
+    for (int i = 0; i < 3; ++i) {
+        float y = 200 + i * 40;
+        glBegin(GL_QUADS);
+        glVertex2f(x + 20, y); glVertex2f(x + 45, y);
+        glVertex2f(x + 45, y + 25); glVertex2f(x + 20, y + 25);
+        glVertex2f(x + 75, y); glVertex2f(x + 100, y);
+        glVertex2f(x + 100, y + 25); glVertex2f(x + 75, y + 25);
+        glEnd();
+
+        if (!isDaytime_4 && !isMorning_4) { // Lights off during day and morning
+            drawLight_4(x + 20, y, x + 45, y + 25);
+            drawLight_4(x + 75, y, x + 100, y + 25);
+        }
+    }
+}
+
+void drawMosque_4() {
+    float x = 800;
+
+    // Main building
+    Color mosqueColor;
+    if (isMorning_4) {
+        mosqueColor = {0.85f, 0.85f, 0.75f};
+    } else if (isDaytime_4) {
+        mosqueColor = {0.95f, 0.95f, 0.85f};
+    } else {
+        mosqueColor = {0.5f, 0.5f, 0.45f};
+    }
+
+    glColor3f(mosqueColor.r, mosqueColor.g, mosqueColor.b);
+    glBegin(GL_QUADS);
+    glVertex2f(x, 185); glVertex2f(x + 100, 185);
+    glVertex2f(x + 100, 350); glVertex2f(x, 350);
+    glEnd();
+
+    // Dome
+    Color domeColor;
+    if (isMorning_4) {
+        domeColor = {0.7f, 0.8f, 0.6f};
+    } else if (isDaytime_4) {
+        domeColor = {0.8f, 0.9f, 0.7f};
+    } else {
+        domeColor = {0.4f, 0.5f, 0.4f};
+    }
+    drawCircle_4(x + 50, 370, 30, 32, domeColor);
+
+    // Minaret
+    Color minaretColor;
+    if (isMorning_4) {
+        minaretColor = {0.8f, 0.8f, 0.7f};
+    } else if (isDaytime_4) {
+        minaretColor = {0.9f, 0.9f, 0.8f};
+    } else {
+        minaretColor = {0.5f, 0.5f, 0.45f};
+    }
+
+    glColor3f(minaretColor.r, minaretColor.g, minaretColor.b);
+    glBegin(GL_QUADS);
+    glVertex2f(x + 80, 185); glVertex2f(x + 90, 185);
+    glVertex2f(x + 90, 420); glVertex2f(x + 80, 420);
+    glEnd();
+
+    // Minaret top (sphere/dome-like structure)
+    drawCircle_4(x + 85, 425, 10, 16, domeColor);
+
+    // Star on Minaret
+    Color starColor;
+    if (isMorning_4) {
+        starColor = {0.9f, 0.8f, 0.1f}; // Gold for morning
+    } else if (isDaytime_4) {
+        starColor = {0.8f, 0.7f, 0.15f}; // Gold for day
+    } else { // Night
+        starColor = {1.0f, 0.95f, 0.1f}; // Bright gold for night
+    }
+    drawFivePointedStar_4(x + 85, 445, 12, 5, starColor);
+
+    // Windows
+    Color mosqueWindowColor;
+    if (isMorning_4) {
+        mosqueWindowColor = {0.5f, 0.7f, 0.9f};
+    } else if (isDaytime_4) {
+        mosqueWindowColor = {0.7f, 0.8f, 1.0f};
+    } else {
+        mosqueWindowColor = {0.9f, 0.9f, 0.2f};
+    }
+
+    glColor3f(mosqueWindowColor.r, mosqueWindowColor.g, mosqueWindowColor.b);
+    for (int i = 0; i < 3; ++i) {
+        float y_win = 200 + i * 40;
+        glBegin(GL_QUADS);
+        glVertex2f(x + 20, y_win); glVertex2f(x + 40, y_win);
+        glVertex2f(x + 40, y_win + 25); glVertex2f(x + 20, y_win + 25);
+        glVertex2f(x + 60, y_win); glVertex2f(x + 80, y_win);
+        glVertex2f(x + 80, y_win + 25); glVertex2f(x + 60, y_win + 25);
+        glEnd();
+
+        if (!isDaytime_4 && !isMorning_4) { // Lights off during day and morning
+            drawLight_4(x + 20, y_win, x + 40, y_win + 25);
+            drawLight_4(x + 60, y_win, x + 80, y_win + 25);
+        }
+    }
+}
+
+void drawBridgeStructure_4() {
+    glColor3f(0.35f, 0.25f, 0.15f); // Darker brown pillars
+    for (int x = 0; x <= 260; x += 40) {
+        glBegin(GL_POLYGON);
+        glVertex2f(x, 250);
+        glVertex2f(x + 15, 250);
+        glVertex2f(x + 15, 180);
+        glVertex2f(x, 180);
+        glEnd();
+    }
+    glColor3f(0.6f, 0.5f, 0.4f); // Lighter brown deck under rails
+    glBegin(GL_QUADS);
+    glVertex2f(0, 250);
+    glVertex2f(300, 250);
+    glVertex2f(300, 245);
+    glVertex2f(0, 245);
+    glEnd();
+}
+
+void drawRailGuard_4() {
+    glColor3f(0.25f, 0.25f, 0.25f); // Dark grey for guard rails
+    for (int x = 0; x <= 300; x += 10) {
+        glBegin(GL_LINES);
+        glVertex2f(x, 270);
+        glVertex2f(x, 285);
+        glEnd();
+    }
+    glBegin(GL_LINES);
+    glVertex2f(0, 285);
+    glVertex2f(300, 285);
+    glVertex2f(0, 275);
+    glVertex2f(300, 275);
+    glEnd();
+}
+
+void drawRailwayLine_4() {
+    glColor3f(0.55f, 0.55f, 0.55f);    // Track base
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 270);
+    glVertex2f(1000, 270);
+    glVertex2f(1000, 250);
+    glVertex2f(0, 250);
+    glEnd();
+
+    glColor3f(0.35f, 0.25f, 0.15f);    // Sleepers
+    for (int i = 0; i < 1000; i += 20) {
+        glBegin(GL_LINES);
+        glVertex2f(i, 250);
+        glVertex2f(i, 270);
+        glEnd();
+    }
+
+    glColor3f(0.85f, 0.85f, 0.85f);    // Rails
+    glBegin(GL_LINES);
+    glVertex2f(0, 230);
+    glVertex2f(1000, 230);
+    glVertex2f(0, 210);
+    glVertex2f(1000, 210);
+    glEnd();
+}
+
+void drawTrain_4() {
+    float baseY = 230;
+
+    // Draw 5 coaches
+    for (int i = 0; i < 5; ++i) {
+        float cx = trainX_4 + i * 80;
+
+        // Coach body
+        glColor3f(0.15f, 0.15f, 0.7f); // Darker blue coaches
+        glBegin(GL_POLYGON);
+        glVertex2f(cx, baseY);
+        glVertex2f(cx + 70, baseY);
+        glVertex2f(cx + 70, baseY + 40);
+        glVertex2f(cx, baseY + 40);
+        glEnd();
+
+        // Roof
+        glColor3f(0.1f, 0.1f, 0.5f); // Darker blue roof
+        glBegin(GL_POLYGON);
+        glVertex2f(cx, baseY + 40);
+        glVertex2f(cx + 70, baseY + 40);
+        glVertex2f(cx + 70, baseY + 45);
+        glVertex2f(cx, baseY + 45);
+        glEnd();
+
+        // Windows
+        glColor3f(0.95f, 0.95f, 1.0f); // Light blue windows
+        for (int j = 0; j < 3; ++j) {
+            float wx = cx + 10 + j * 20;
+            glBegin(GL_POLYGON);
+            glVertex2f(wx, baseY + 20);
+            glVertex2f(wx + 10, baseY + 20);
+            glVertex2f(wx + 10, baseY + 35);
+            glVertex2f(wx, baseY + 35);
+            glEnd();
+        }
+
+        // Wheels
+        glColor3f(0, 0, 0); // Black wheels
+        drawCircle_4(cx + 15, baseY, 5);
+        drawCircle_4(cx + 55, baseY, 5);
+    }
+
+    // Engine
+    float x_4 = trainX_4 + 5 * 80; // Position of the engine after coaches
+    glColor3f(0.8f, 0.1f, 0.1f); // Bright red engine body
+    glBegin(GL_POLYGON);
+    glVertex2f(x_4, baseY);
+    glVertex2f(x_4 + 70, baseY);
+    glVertex2f(x_4 + 70, baseY + 50);
+    glVertex2f(x_4, baseY + 50);
+    glEnd();
+
+    // Chimney
+    glColor3f(0.3f, 0.3f, 0.3f); // Dark grey chimney
+    glBegin(GL_POLYGON);
+    glVertex2f(x_4+ 50, baseY + 50);
+    glVertex2f(x_4 + 60, baseY + 50);
+    glVertex2f(x_4 + 60, baseY + 70);
+    glVertex2f(x_4 + 50, baseY + 70);
+    glEnd();
+
+    // Slanted nose at the front (right side)
+    glColor3f(0.6f, 0.1f, 0.1f); // Darker red nose
+    glBegin(GL_TRIANGLES);
+    glVertex2f(x_4 + 70, baseY);
+    glVertex2f(x_4 + 90, baseY);
+    glVertex2f(x_4+ 70, baseY + 30);
+    glEnd();
+
+    // Engine windows
+    glColor3f(0.95f, 0.95f, 1.0f); // Light blue windows
+    glBegin(GL_POLYGON);
+    glVertex2f(x_4 + 5, baseY + 30);
+    glVertex2f(x_4 + 25, baseY + 30);
+    glVertex2f(x_4 + 25, baseY + 45);
+    glVertex2f(x_4 + 5, baseY + 45);
+    glEnd();
+
+    // Engine wheels
+    glColor3f(0, 0, 0); // Black wheels
+    drawCircle_4(x_4 + 15, baseY, 6);
+    drawCircle_4(x_4 + 55, baseY, 6);
+}
+
+void drawBoat_4(float xPos, float yPos, float scale, bool reverseDirection = false) {
+    glPushMatrix();
+    glTranslatef(xPos, yPos, 0.0f);
+    glScalef(scale, scale, 1.0f);
+
+    if (reverseDirection) {
+        glScalef(-1.0f, 1.0f, 1.0f); // Flip horizontally for opposite direction
+    }
+
+    // Hull
+    glColor3f(0.15f, 0.15f, 0.4f); // Darker blue hull
+    glBegin(GL_POLYGON);
+        glVertex2f(-0.4f, -0.1f);
+        glVertex2f(-0.5f, 0.0f);
+        glVertex2f(0.5f, 0.0f);
+        glVertex2f(0.4f, -0.1f);
+    glEnd();
+
+    // Cabin
+    glColor3f(0.9f, 0.8f, 0.55f); // Cream/tan cabin
+    glBegin(GL_QUADS);
+        glVertex2f(-0.2f, 0.0f);
+        glVertex2f(0.2f, 0.0f);
+        glVertex2f(0.2f, 0.2f);
+        glVertex2f(-0.2f, 0.2f);
+    glEnd();
+
+    // Oar (represented as a single stick for simplicity)
+    glColor3f(0.35f, 0.15f, 0.0f); // Darker brown oar
+    glPushMatrix();
+    glTranslatef(0.1f, 0.15f, 0.0f);
+    glRotatef(45.0f, 0.0f, 0.0f, 1.0f); // Rotate oar
+    glBegin(GL_QUADS);
+        glVertex2f(-0.01f, -0.15f);
+        glVertex2f(0.01f, -0.15f);
+        glVertex2f(0.01f, 0.15f);
+        glVertex2f(-0.01f, 0.15f);
+    glEnd();
+    glPopMatrix();
+
+    // Person (simple rectangle)
+    glColor3f(0.15f, 0.15f, 0.15f); // Darker grey/black person
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, 0.0f);
+    glBegin(GL_QUADS);
+        glVertex2f(-0.05f, 0.0f);
+        glVertex2f(0.05f, 0.0f);
+        glVertex2f(0.05f, 0.15f);
+        glVertex2f(-0.05f, 0.15f);
+    glEnd();
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+void drawLamppost_4(float x, float y_base) {
+    // Pole
+    glColor3f(0.35f, 0.35f, 0.35f); // Dark grey pole
+    glBegin(GL_QUADS);
+    glVertex2f(x - 3, y_base);
+    glVertex2f(x + 3, y_base);
+    glVertex2f(x + 3, y_base + 100); // Taller lamppost
+    glVertex2f(x - 3, y_base + 100);
+    glEnd();
+
+    // Lamp head arm
+    glBegin(GL_QUADS);
+    glVertex2f(x, y_base + 100);
+    glVertex2f(x + 25, y_base + 100);
+    glVertex2f(x + 25, y_base + 95);
+    glVertex2f(x, y_base + 95);
+    glEnd();
+
+    // Lamp head
+    glColor3f(0.5f, 0.5f, 0.5f); // Grey lamp head
+    glBegin(GL_QUADS);
+    glVertex2f(x + 20, y_base + 95);
+    glVertex2f(x + 35, y_base + 95);
+    glVertex2f(x + 35, y_base + 80);
+    glVertex2f(x + 20, y_base + 80);
+    glEnd();
+
+    // Light glow (only at night)
+    if (!isDaytime_4&& !isMorning_4) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glColor4f(1.0f, 1.0f, 0.8f, 0.5f); // Yellowish light with transparency
+
+        // Light cone
+        glBegin(GL_TRIANGLES);
+        glVertex2f(x + 27, y_base + 80); // Top of light source
+        glVertex2f(x + 10, y_base);      // Bottom left
+        glVertex2f(x + 45, y_base);      // Bottom right
+        glEnd();
+
+        // Light bulb
+        glColor4f(1.0f, 1.0f, 0.5f, 1.0f); // Bright yellow bulb
+        glBegin(GL_QUADS);
+        glVertex2f(x + 25, y_base + 85);
+        glVertex2f(x + 30, y_base + 85);
+        glVertex2f(x + 30, y_base + 80);
+        glVertex2f(x + 25, y_base + 80);
+        glEnd();
+
+        glDisable(GL_BLEND);
+    }
+}
+
+void drawBridge_4() {
+    glBegin(GL_QUADS);
+    glColor3f(0.3f, 0.3f, 0.35f); // Darker grey for bridge
+    glVertex2f(0, 170);
+    glVertex2f(1000, 170);
+    glVertex2f(1000, 190);
+glVertex2f(0, 190);
+    glEnd();
+}
+
+void drawTracks_4() {
+    glBegin(GL_QUADS);
+    glColor3f(0.2f, 0.2f, 0.2f); // Dark grey for track base
+    glVertex2f(0, 185); glVertex2f(1000, 185); glVertex2f(1000, 230); glVertex2f(0, 230);
+    glEnd();
+
+    glLineWidth(3);
+    glBegin(GL_LINES);
+    glColor3f(0.8f, 0.8f, 0.8f); // Silver for rails
+    glVertex2f(0, 220); glVertex2f(1000, 220);
+    glVertex2f(0, 195); glVertex2f(1000, 195);
+    glEnd();
+
+    glBegin(GL_QUADS);
+    glColor3f(0.5f, 0.35f, 0.2f); // Brown for sleepers
+    for (int i = 0; i < 1000; i += 40) {
+        glVertex2f(i, 190); glVertex2f(i + 30, 190);
+        glVertex2f(i + 30, 225); glVertex2f(i, 225);
+    }
+    glEnd();
+}
+
+void drawRiver_4() {
+    glBegin(GL_QUADS);
+    // Use morning river color if isMorning is true
+    if (isMorning_4) {
+        glColor3fv(&riverColorMorning.r);
+    } else {
+        glColor3fv(isDaytime_4 ? &riverColorDay.r : &riverColorNight.r);
+    }
+    glVertex2f(0, 0);
+    glVertex2f(1000, 0);
+    glVertex2f(1000, 170);
+    glVertex2f(0, 170);
+    glEnd();
+
+    // Adjust water ripples color for morning
+    if (isMorning_4) {
+        glColor3f(riverColorMorning.r * 1.1f, riverColorMorning.g * 1.1f, riverColorMorning.b * 1.1f);
+    } else {
+        glColor3f(isDaytime_4 ? 0.2f * 1.1f : 0.1f * 1.1f,
+                  isDaytime_4 ? 0.6f * 1.1f : 0.2f * 1.1f,
+                  isDaytime_4 ? 0.8f * 1.1f : 0.3f * 1.1f);
+    }
+    glLineWidth(1.5);
+    glBegin(GL_LINES);
+    for (int i = 0; i < 1000; i += 20) {
+        glVertex2f(i, 50 + 10 * sinf(i * 0.05f + cloudPos_4 * 0.1f));
+        glVertex2f(i + 15, 50 + 10 * sinf((i + 15) * 0.05f + cloudPos_4 * 0.1f));
+        glVertex2f(i + 5, 100 + 8 * sinf((i + 5) * 0.06f + 1 + cloudPos_4 * 0.1f));
+        glVertex2f(i + 20, 100 + 8 * sinf((i + 20) * 0.06f + 1 + cloudPos_4 * 0.1f));
+    }
+    glEnd();
+    glLineWidth(1);
+}
+
+// Helper function to draw a triangle
+void drawTriangle_4(float x1, float y1, float x2, float y2, float x3, float y3) {
+    glBegin(GL_TRIANGLES);
+    glVertex2f(x1, y1);
+    glVertex2f(x2, y2);
+    glVertex2f(x3, y3);
+    glEnd();
+}
+
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Sky gradient
+    glBegin(GL_QUADS);
+    // Determine sky color based on morning, day, or night
+    if (isMorning_4) {
+        glColor3fv(&skyMorning.r); // Top color (darker morning sky)
+    } else {
+        glColor3fv(isDaytime_4 ? &skyDay.r : &skyNight.r); // Top color
+    }
+    glVertex2f(0, 600);
+    glVertex2f(1000, 600);
+
+    // Adjust bottom sky color for morning (slightly lighter than top)
+    if (isMorning_4) {
+        glColor3f(skyMorning.r * 1.2f, skyMorning.g * 1.2f, skyMorning.b * 1.2f);
+    } else {
+        glColor3f(isDaytime_4 ? skyDay.r * 0.8f : skyNight.r * 1.2f,
+                  isDaytime_4 ? skyDay.g * 0.8f : skyNight.g * 1.2f,
+                  isDaytime_4 ? skyDay.b * 0.8f : skyNight.b * 1.2f);
+    }
+    glVertex2f(1000, 185); glVertex2f(0, 185);
+    glEnd();
+
+    // --- Lightning Flash Drawing ---
+    if (isLightning_4) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // White-blue flash that covers the whole sky
+        // Alpha fades out from 1.0 to 0.0 as lightningTimer decreases
+        float alpha = (float)lightningTimer_4 / LIGHTNING_DURATION_4;
+        glColor4f(0.9f, 0.9f, 1.0f, alpha); // Mostly white, slightly blue, with fading alpha
+        glBegin(GL_QUADS);
+        glVertex2f(0, 185); // Start from just above the ground/city level
+        glVertex2f(1000, 185);
+        glVertex2f(1000, 600); // Up to the top of the screen
+        glVertex2f(0, 600);
+        glEnd();
+        glDisable(GL_BLEND);
+    }
+    // --- End Lightning Flash Drawing ---
+
+    drawSunMoon_4();
+    drawHills_4();
+    drawRainbow_4();
+
+
+    drawStars_4();
+
+    drawClouds_4();
+    drawMountains_4(); // Mountains drawn before buildings to appear behind them
+
+    // Ground for the city/structures (Draw this *before* things on top of it)
+    glBegin(GL_QUADS);
+    // Use morning ground color if isMorning is true
+    if (isMorning_4) {
+        glColor3fv(&groundMorning.r);
+    } else {
+        glColor3fv(isDaytime_4 ? &groundDay.r : &groundNight.r);
+    }
+    glVertex2f(0, 170); glVertex2f(1000, 170); glVertex2f(1000, 185); glVertex2f(0, 185);
+    glEnd();
+
+    drawRiver_4(); // Draw river before the bridge, as bridge is on top
+    drawBridge_4(); // Draw bridge over the river
+    drawRoad_4(); // Draw road on top of the ground/bridge
+
+
+
+    // Draw all three boats
+    drawBoat_4(boatPos_4, 85.0f, 100.0f); // Main boat moving right
+    drawBoat_4(boat2Pos_4, 120.0f, 80.0f, true); // Second boat moving left (opposite direction)
+    drawBoat_4(boat3Pos_4, 60.0f, 120.0f); // Third boat moving right (larger and faster)
+
+
+      // Draw trees near buildings (should be on top of ground)
+    drawTree_4(70, 185);    // Near the first building
+    drawTree_4(180, 185);   // Between first and second building
+    drawTree_4(350, 185);   // Near the third building
+    drawTree_4(500, 185);   // Near the very big building
+
+    // Draw a tree next to the windmill (should be on top of ground)
+    drawTree_4(920, 185); // Adjust X coordinate as needed to position relative to your windmill
+    drawRain_4();
+
+
+
+    // Draw buildings and structures (should be on top of ground)
+    drawBuildings_4();
+    drawHospital_4();
+    drawMosque_4(); // Draw mosque
+
+
+    // Draw windmill (should be on top of ground)
+    drawWindmill_4();
+
+    drawTracks_4(); // Tracks on top of road/ground
+
+    drawTrain_4(); // Train on tracks
+
+    // Draw lampposts (should be on top of road/ground)
+    drawLamppost_4(150, 170);
+    drawLamppost_4(300, 170);
+    drawLamppost_4(450, 170);
+    drawLamppost_4(600, 170);
+    drawLamppost_4(750, 170);
+    drawLamppost_4(900, 170);
+
+
+    // DRAW SEATING ZONES LAST, so benches are on top of everything else in that area.
+    drawSeatingZones_4();
+
+    glutSwapBuffers();
+}
+
+void update(int value) {
+    // Calculate the total width of the train
+    float trainLength = 5 * 80.0f + 90.0f; // 5 coaches + engine length (approx)
+
+    trainX_4 += trainSpeed_4;
+    if (trainX_4 > 1000 + trainLength) {
+        trainX_4 = -trainLength; // Reset to start just off the left side
+    }
+
+    cloudPos_4+= 0.3f;
+    if (cloudPos_4 > 1100.0f) cloudPos_4 = 0.0f;
+
+    // Adjust sun/moon position logic to account for morning
+    if (isMorning_4) {
+
+        if (sunMoonPos_4 < 0.5f) sunMoonPos_4+= 0.0005f;
+        else if (sunMoonPos_4> 0.5f) sunMoonPos_4 = 0.5f;
+    } else if (isDaytime_4) {
+
+        if (sunMoonPos_4< 1.0f) sunMoonPos_4 += 0.0005f; // Slower movement
+        else if (sunMoonPos_4 > 1.0f) sunMoonPos_4 = 1.0f; // Cap at a certain point for "day"
+    } else { // Night transition (moon rising/setting)
+
+        if (sunMoonPos_4 < 1.0f) sunMoonPos_4 += 0.0005f; // Slower movement
+        else if (sunMoonPos_4 > 1.0f) sunMoonPos_4 = 1.0f;
+    }
+
+
+    // Update boat positions
+    boatPos_4+= boatPos_4;
+    if (boatPos_4 > 1000.0f + 50.0f) boatPos_4 = -150.0f;
+
+    boat2Pos_4 -= boat2Speed_4; // Boat moving left (opposite direction)
+    if (boat2Pos_4 < -150.0f) boat2Pos_4 = 1100.0f;
+
+    boat3Pos_4 += fasterBoatSpeed_4; // Third boat moving right
+    if (boat3Pos_4 > 1000.0f + 75.0f) boat3Pos_4 = -300.0f;
+
+    updateRain_4();
+    airplanePos_4 += airplaneSpeed_4;
+    if (airplanePos_4 > 1000.0f + 120.0f) airplanePos_4 = -200.0f;
+
+    windmillAngle_4+= 1.0f;
+    if (windmillAngle_4 >= 360.0f) windmillAngle_4-= 360.0f;
+
+    // --- Lightning Flash Timer ---
+    if (isLightning_4) {
+        lightningTimer_4--;
+        if (lightningTimer_4 <= 0) {
+            isLightning_4= false; // Turn off flash when timer expires
+        }
+    }
+    // --- End Lightning Flash Timer ---
+
+    glutPostRedisplay();
+    glutTimerFunc(16, update, 0); // ~60 FPS
+
+}
+
+void keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+        case 'd': case 'D':
+            isDaytime_4 = true;
+            isMorning_4= false; // Ensure morning is off
+            // Reset colors to default day colors explicitly when 'D' is pressed
+            skyDay= {0.53f, 0.81f, 0.92f}; // Re-assign values
+            groundDay = {0.4f, 0.7f, 0.2f};
+            riverColorDay = {0.2f, 0.6f, 0.8f};
+            sunMoonPos_4 = 0.0f; // Reset sun position to start of day (right side for setting)
+            break;
+        case 'n': case 'N':
+            isDaytime_4 = false;
+            isMorning_4= false; // Ensure morning is off
+            sunMoonPos_4= 0.0f; // Reset moon position to start of night (left side for rising)
+            break;
+        case 'm': case 'M': // New key for morning view
+            isMorning_4 = true;
+            isDaytime_4 = false; // Ensure it's not also daytime
+
+            // **Darker Morning Sky Colors**
+            skyMorning.r = 0.1f;
+            skyMorning.g = 0.1f;
+            skyMorning.b = 0.2f;
+
+            // Complementary darker ground and river colors for the darker morning sky
+            groundMorning.r = 0.25f;
+            groundMorning.g = 0.35f;
+            groundMorning.b = 0.15f;
+
+            riverColorMorning.r = 0.1f;
+            riverColorMorning.g = 0.2f;
+            riverColorMorning.b = 0.3f;
+
+            sunMoonPos_4= 0.0f; // Reset sun position to start of morning rise (left side)
+        case '+': // Increase speed
+    if (trainSpeed_4< 10.0f) trainSpeed_4 += 0.2f;
+    //if (boatSpeed_4< 5.0f) boatSpeed_4+= 0.1f;
+    if (boat2Speed_4< 4.0f) boat2Speed_4+= 0.1f;
+    if (fasterBoatSpeed_4< 6.0f) fasterBoatSpeed_4 += 0.1f;
+    break;
+
+case '-': // Decrease speed
+    if (trainSpeed_4 > 0.2f) trainSpeed_4 -= 0.2f;
+//    if (boatSpeed_4 > 0.1f) boatSpeed_4 -= 0.1f;
+    if (boat2Speed_4 > 0.1f) boat2Speed_4 -= 0.1f;
+    if (fasterBoatSpeed_4 > 0.1f) fasterBoatSpeed_4 -= 0.1f;
+    break;
+
+        case ' ': // Toggle pause/resume
+            if (trainSpeed_4 > 0.01f) {
+                trainSpeed_4 = 0.0f;
+                boat2Speed_4 = 0.0f;
+                fasterBoatSpeed_4= 0.0f;
+            } else { // Resume to default speeds
+                trainSpeed_4 = 2.0f;
+                boat2Speed_4 = 0.8f;
+                fasterBoatSpeed_4 = 1.2f;
+            }
+            break;
+        case 'l': case 'L': // New: Lightning flash
+            // Only allow lightning if it's night or raining
+            if (!isDaytime_4 && !isMorning_4 || isRaining_4) {
+                isLightning_4= true;
+                lightningTimer_4 = LIGHTNING_DURATION_4;
+            }
+            break;
+
+           // ... other cases ...
+        case 'r': case 'R': // Show rainbow
+            showRainbow_4 = true;
+            glutTimerFunc(3000, rainbowOff_4, 0); // Hide rainbow after 3 seconds
+            break;
+        // ... other
+
+
+    }
+    glutPostRedisplay(); // Request a redraw after keyboard input
+}
+
+void mouse(int button, int state, int x, int y) {
+    if (state == GLUT_DOWN) {
+        if (button == GLUT_RIGHT_BUTTON) {
+            isRaining_4 = true;
+        } else if (button == GLUT_LEFT_BUTTON) {
+            isRaining_4 = false;
+        }
+    }
+}
+
+
+void reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1000, 0, 600); // Set up 2D orthographic projection
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB); // Double buffering and RGB color
+    glutInitWindowSize(1000, 600); // Initial window size
+    glutCreateWindow("Animated Scene: Railway, River, City Elements"); // Window title
+
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutKeyboardFunc(keyboard);
+    glutMouseFunc(mouse);
+    glutTimerFunc(0, update, 0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    initRain_4();  // Initialize raindrop positions
+    initStars_4(); // Initialize star positions
+
+    glutMainLoop(); // Enter the GLUT event processing loop
+    return 0;
+}

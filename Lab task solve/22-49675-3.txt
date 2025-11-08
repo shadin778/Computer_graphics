@@ -1,0 +1,128 @@
+#include <windows.h>
+#include <GL/glut.h>
+#include <cmath>
+ 
+void drawCircleFilled(int centerX, int centerY, int r) {
+int a = 0;
+int b = r;
+int decision = 1 - r;
+ 
+while (a <= b) {
+glBegin(GL_LINES);
+glVertex2i(centerX - a, centerY + b);
+glVertex2i(centerX + a, centerY + b);
+ 
+glVertex2i(centerX - a, centerY - b);
+glVertex2i(centerX + a, centerY - b);
+ 
+glVertex2i(centerX - b, centerY + a);
+glVertex2i(centerX + b, centerY + a);
+ 
+glVertex2i(centerX - b, centerY - a);
+glVertex2i(centerX + b, centerY - a);
+glEnd();
+ 
+if (decision < 0) {
+decision += 2 * a + 3;
+} else {
+decision += 2 * (a - b) + 5;
+b--;
+}
+a++;
+}
+}
+ 
+void renderScene() {
+glClear(GL_COLOR_BUFFER_BIT);
+glLoadIdentity();
+ 
+glTranslatef(100.0f, 50.0f, 0.0f);
+glRotatef(15.0f, 0.0f, 0.0f, 1.0f);
+glScalef(0.8f, 0.8f, 1.0f);
+ 
+glColor3f(0.7f, 0.5f, 0.3f);
+glBegin(GL_QUADS);
+glVertex2i(100, 100);
+glVertex2i(110, 100);
+glVertex2i(110, 500);
+glVertex2i(100, 500);
+glEnd();
+ 
+glColor3f(0.3f, 0.15f, 0.0f);
+glBegin(GL_TRIANGLES);
+glVertex2i(105, 520);
+glVertex2i(100, 500);
+glVertex2i(110, 500);
+glEnd();
+ 
+glColor3f(0.4f, 0.2f, 0.0f);
+glBegin(GL_QUADS);
+glVertex2i(90, 100);
+glVertex2i(120, 100);
+glVertex2i(120, 90);
+glVertex2i(90, 90);
+glEnd();
+glBegin(GL_QUADS);
+glVertex2i(85, 90);
+glVertex2i(125, 90);
+glVertex2i(125, 80);
+glVertex2i(85, 80);
+glEnd();
+glBegin(GL_QUADS);
+glVertex2i(80, 80);
+glVertex2i(130, 80);
+glVertex2i(130, 70);
+glVertex2i(80, 70);
+glEnd();
+ 
+glColor3f(0.0f, 0.5f, 0.0f);
+int flagLeft = 110;
+int flagBottom = 340;
+int flagWidth = 300;
+int flagHeight = 160;
+glBegin(GL_QUADS);
+glVertex2i(flagLeft, flagBottom);
+glVertex2i(flagLeft + flagWidth, flagBottom);
+glVertex2i(flagLeft + flagWidth, flagBottom + flagHeight);
+glVertex2i(flagLeft, flagBottom + flagHeight);
+glEnd();
+ 
+glColor3f(1.0f, 0.0f, 0.0f);
+int centerX = flagLeft + flagWidth / 2 - 10;
+int centerY = flagBottom + flagHeight / 2;
+int radius = 50;
+drawCircleFilled(centerX, centerY, radius);
+ 
+glColor3f(0.0f, 0.5f, 0.0f);
+int boxLeft = 80;
+int boxBottom = 30;
+int boxWidth = 340;
+int boxHeight = 30;
+glBegin(GL_LINE_LOOP);
+glVertex2i(boxLeft, boxBottom);
+glVertex2i(boxLeft + boxWidth, boxBottom);
+glVertex2i(boxLeft + boxWidth, boxBottom + boxHeight);
+glVertex2i(boxLeft, boxBottom + boxHeight);
+glEnd();
+ 
+glFlush();
+}
+ 
+void setupGraphics() {
+glClearColor(1.0, 1.0, 1.0, 1.0);
+glMatrixMode(GL_PROJECTION);
+glLoadIdentity();
+gluOrtho2D(0, 800, 0, 600);
+glMatrixMode(GL_MODELVIEW);
+}
+ 
+int main(int argc, char** argv) {
+glutInit(&argc, argv);
+glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+glutInitWindowSize(800, 600);
+glutCreateWindow("Bangladesh Flag Drawing - Transformed");
+setupGraphics();
+glutDisplayFunc(renderScene);
+glutMainLoop();
+return 0;
+}

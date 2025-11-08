@@ -1,0 +1,2815 @@
+#include <GL/glut.h>
+#include <cmath>
+#include <vector>
+#include <string>
+#include <iostream>
+
+// Global variable to control which scene is displayed
+int currentScene = 1; // Default to Scene 1
+
+// ==============================================================================
+// GLOBAL VARIABLES FOR SCENE 1 (Prefix: ershad)
+// ==============================================================================
+float ershad_trainX = 0;
+bool ershad_trainMoving = true;
+float ershad_minuteAngle = 0.0f;
+float ershad_hourAngle = 0.0f;
+bool ershad_isDay = false;
+bool ershad_sunRising = false;
+float ershad_sunY = 300.0f;
+float ershad_carX = 0;
+float ershad_carY = 145;
+float ershad_Car2X = -400;
+float ershad_cloudX1 = -150.0f;
+float ershad_cloudX2 = -400.0f;
+float ershad_cloudX3 = -700.0f;
+float ershad_windmill_angle = 0.0f;
+
+// ==============================================================================
+// GLOBAL VARIABLES FOR SCENE 2 (Prefix: ehsan)
+// ==============================================================================
+float ehsan_TRAIN_BRIDGE_HEIGHT = 50.0f;
+float ehsan_TRAIN_BRIDGE_DECK_Y = 250.0f;
+bool ehsan_lamppostsOn = false;
+float ehsan_currentHour = 12.0f; // Example hour for time-based brightness
+bool ehsan_isRaining = false;
+std::vector<struct ehsan_Raindrop> ehsan_raindrops;
+float ehsan_carPositions[] = {0, 250, 500, 750};
+int ehsan_carDirections[] = {1, 1, 1, 1}; // 1 for right, -1 for left
+float ehsan_busPosition = 0;
+int ehsan_busDirection = 1;
+float ehsan_windmillBladeAngle1 = 0.0f;
+float ehsan_windmillBladeAngle2 = 0.0f;
+float ehsan_ROAD_BOTTOM_Y = 80;
+float ehsan_ROAD_TOP_Y = 170;
+float ehsan_GROUND_LEVEL_Y = 0;
+float ehsan_RAILWAY_BASE_Y = 250;
+float ehsan_boatPos1 = 0;
+float ehsan_boatPos2 = 500;
+float ehsan_boatY1 = 50;
+float ehsan_boatY2 = 50;
+bool ehsan_isNightTime = false;
+bool ehsan_isTrainMoving = true;
+bool ehsan_playWhistle = false;
+float ehsan_trainX = 0;
+
+struct ehsan_Raindrop {
+    float x, y, speed, length;
+};
+
+
+// ==============================================================================
+// GLOBAL VARIABLES FOR SCENE 3 (Prefix: niloy)
+// ==============================================================================
+int niloy_currentMode = 0; // Mode for hospital windows
+std::vector<struct niloy_Raindrop> niloy_raindrops;
+struct niloy_Raindrop {
+    float x, y, speed, length;
+};
+float niloy_busX = 0;
+
+// ==============================================================================
+// GLOBAL VARIABLES FOR SCENE 4 (Prefix: shadhin)
+// ==============================================================================
+bool shadhin_isMorning = false;
+bool shadhin_isDaytime = true;
+struct shadhin_Color { float r, g, b; };
+shadhin_Color shadhin_skyMorning = {0.8f, 0.7f, 0.6f};
+shadhin_Color shadhin_skyDay = {0.53f, 0.81f, 0.98f};
+shadhin_Color shadhin_skyNight = {0.0f, 0.0f, 0.1f};
+shadhin_Color shadhin_groundMorning = {0.6f, 0.5f, 0.4f};
+shadhin_Color shadhin_groundDay = {0.2f, 0.6f, 0.2f};
+shadhin_Color shadhin_groundNight = {0.1f, 0.3f, 0.1f};
+int shadhin_lightningTimer = 0;
+const int shadhin_LIGHTNING_DURATION = 10;
+bool shadhin_isLightning = false;
+float shadhin_sunMoonPos = 0.0f;
+float shadhin_cloudX[3] = {100, 400, 700};
+float shadhin_cloudY[3] = {500, 550, 520};
+float shadhin_rainbowAngle = 0.0f;
+bool shadhin_showRainbow = false;
+float shadhin_trainX = 0;
+float shadhin_trainSpeed = 0.5f;
+float shadhin_airplaneX = 1000;
+float shadhin_airplaneY = 450;
+float shadhin_hotAirBalloonX = -200;
+float shadhin_hotAirBalloonY = 300;
+float shadhin_windmillAngle = 0.0f;
+float shadhin_carPositions[] = {0, 250, 500, 750};
+int shadhin_carDirections[] = {1, 1, 1, 1}; // 1 for right, -1 for left
+float shadhin_busPosition = 0;
+int shadhin_busDirection = 1;
+bool shadhin_isRaining = false;
+std::vector<struct shadhin_Raindrop> shadhin_raindrops;
+struct shadhin_Raindrop {
+    float x, y, speed, length;
+};
+float shadhin_boatPos1 = 0;
+float shadhin_boatPos2 = 500;
+float shadhin_boatY1 = 50;
+float shadhin_boatY2 = 50;
+
+// ==============================================================================
+// UTILITY FUNCTIONS (SHARED)
+// ==============================================================================
+void drawCircle(float cx, float cy, float r, int num_segments = 100, float red = -1.0f, float green = -1.0f, float blue = -1.0f) {
+    if (red >= 0 && green >= 0 && blue >= 0) {
+        glColor3f(red, green, blue);
+    }
+    glBegin(GL_TRIANGLE_FAN);
+    for (int i = 0; i <= num_segments; ++i) {
+        float theta = 2.0f * 3.1415926535f * i / num_segments;
+        float x = r * cos(theta);
+        float y = r * sin(theta);
+        glVertex2f(cx + x, cy + y);
+    }
+    glEnd();
+}
+
+void drawRectangle(float x, float y, float width, float height, float r, float g, float b) {
+    glColor3f(r, g, b);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+}
+
+// ==============================================================================
+// SCENE 1 FUNCTIONS (Prefix: ershad)
+// ==============================================================================
+
+void ershad_drawCircle(float cx, float cy, float r) {
+    glBegin(GL_TRIANGLE_FAN);
+    for (int i = 0; i <= 100; ++i) {
+        float theta = 2.0f * 3.1416f * i / 100;
+        float x = r * cos(theta);
+        float y = r * sin(theta);
+        glVertex2f(cx + x, cy + y);
+    }
+    glEnd();
+}
+
+
+void ershad_drawMountains() {
+    glBegin(GL_TRIANGLES);
+
+    // Mountain 1
+    glColor3f(0.3f, 0.2f, 0.1f);
+    glVertex2f(-100, 300);
+    glVertex2f(50, 430);
+    glVertex2f(200, 300);
+
+    // Mountain 2 (tallest)
+    glColor3f(0.4f, 0.26f, 0.13f);
+    glVertex2f(100, 300);
+    glVertex2f(250, 450);
+    glVertex2f(400, 300);
+
+    // Mountain 3
+    glColor3f(0.35f, 0.25f, 0.15f);
+    glVertex2f(350, 300);
+    glVertex2f(500, 420);
+    glVertex2f(650, 300);
+
+    // Mountain 4
+    glColor3f(0.38f, 0.28f, 0.14f);
+    glVertex2f(600, 300);
+    glVertex2f(750, 460);
+    glVertex2f(900, 300);
+
+    // Mountain 5
+    glColor3f(0.42f, 0.30f, 0.16f);
+    glVertex2f(850, 300);
+    glVertex2f(1000, 430);
+    glVertex2f(1150, 300);
+
+    glEnd();
+}
+
+
+void ershad_drawplatform() {
+    glColor3f(1.0f, 1.0f, 0.0f); // grass green
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 270); // left bottom (railway track base)
+    glVertex2f(1000, 270); // right bottom
+    glVertex2f(1000, 300); // right top (bottom of mountains)
+    glVertex2f(0, 300);    // left top
+    glEnd();
+}
+
+
+
+// Railway Track
+void ershad_drawRailwayTrack() {
+    //Track base
+    glColor3f(0.5, 0.5, 0.5);
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 270);
+    glVertex2f(1000, 270);
+    glVertex2f(1000, 250);
+    glVertex2f(0, 250);
+    glEnd();
+
+    //sleepers
+    glColor3f(0.3, 0.2, 0.1);
+    for (int i = 0; i < 1000; i += 20) {
+        glBegin(GL_LINES);
+        glVertex2f(i, 250);
+        glVertex2f(i, 270);
+        glEnd();
+    }
+
+    //rails
+    glColor3f(0.8, 0.8, 0.8);
+    glBegin(GL_LINES);
+    glVertex2f(0, 268); glVertex2f(1000, 268);
+    glVertex2f(0, 252); glVertex2f(1000, 252);
+    glEnd();
+}
+
+
+// Train
+void ershad_drawTrain() {
+    float baseY = 270;
+    for (int i = 0; i < 5; ++i) {
+        float cx = ershad_trainX + i * 80;
+        // Coach body
+        glColor3f(0.2, 0.2, 0.8);
+        glBegin(GL_POLYGON);
+        glVertex2f(cx, baseY);
+        glVertex2f(cx + 70, baseY);
+        glVertex2f(cx + 70, baseY + 40);
+        glVertex2f(cx, baseY + 40);
+        glEnd();
+        // Roof
+        glColor3f(0.1, 0.1, 0.5);
+        glBegin(GL_POLYGON);
+        glVertex2f(cx, baseY + 40);
+        glVertex2f(cx + 70, baseY + 40);
+        glVertex2f(cx + 70, baseY + 45);
+        glVertex2f(cx, baseY + 45);
+        glEnd();
+        // Windows
+        glColor3f(0.9, 0.9, 1.0);
+        for (int j = 0; j < 3; ++j) {
+            float wx = cx + 10 + j * 20;
+            glBegin(GL_POLYGON);
+            glVertex2f(wx, baseY + 20);
+            glVertex2f(wx + 10, baseY + 20);
+            glVertex2f(wx + 10, baseY + 35);
+            glVertex2f(wx, baseY + 35);
+            glEnd();
+        }
+
+        // Wheels
+        glColor3f(0, 0, 0);
+        ershad_drawCircle(cx + 15, baseY, 5);
+        ershad_drawCircle(cx + 55, baseY, 5);
+    }
+
+    // Engine
+    float x = ershad_trainX + 5 * 80;
+
+    glColor3f(0.7, 0.0, 0.0);
+    glBegin(GL_POLYGON);
+    glVertex2f(x, baseY);
+    glVertex2f(x + 70, baseY);
+    glVertex2f(x + 70, baseY + 50);
+    glVertex2f(x, baseY + 50);
+    glEnd();
+    // chimney
+    glColor3f(0.2, 0.2, 0.2);
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 50, baseY + 50);
+    glVertex2f(x + 60, baseY + 50);
+    glVertex2f(x + 60, baseY + 70);
+    glVertex2f(x + 50, baseY + 70);
+    glEnd();
+    // Slanted nose at the front (right side)
+    glColor3f(0.5, 0, 0);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(x + 70, baseY);
+    glVertex2f(x + 90, baseY);
+    glVertex2f(x + 70, baseY + 30);
+    glEnd();
+
+    // Engine windows
+    glColor3f(0.9, 0.9, 1.0);
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 5, baseY + 30);
+    glVertex2f(x + 25, baseY + 30);
+    glVertex2f(x + 25, baseY + 45);
+    glVertex2f(x + 5, baseY + 45);
+    glEnd();
+
+    // Engine wheels
+    glColor3f(0, 0, 0);
+    ershad_drawCircle(x + 15, baseY, 6);
+    ershad_drawCircle(x + 55, baseY, 6);
+}
+
+
+
+
+// Station
+void ershad_drawStation() {
+    // Platform base
+    glColor3f(0.5f, 0.5f, 0.5f); // Concrete grey
+    glBegin(GL_POLYGON);
+    glVertex2f(220, 275);
+    glVertex2f(580, 275);
+    glVertex2f(580, 285);
+    glVertex2f(220, 285);
+    glEnd();
+    // Main building block
+    glColor3f(0.15f, 0.15f, 0.15f); // Modern dark grey
+    glBegin(GL_POLYGON);
+    glVertex2f(240, 285);
+    glVertex2f(560, 285);
+    glVertex2f(560, 385);
+    glVertex2f(240, 385);
+    glEnd();
+
+    // Bigger window 1 (lower position)
+    glColor3f(0.86f, 0.86f, 0.8f);
+    glBegin(GL_POLYGON);
+    glVertex2f(260, 355);  // Left
+    glVertex2f(320, 355);  // Right
+    glVertex2f(320, 315); // Bottom right
+    glVertex2f(260, 315);  // Bottom left
+    glEnd();
+    // Bigger window 2 (lower position)
+    glBegin(GL_POLYGON);
+    glVertex2f(480, 355);
+    glVertex2f(540, 355);
+    glVertex2f(540, 315);
+    glVertex2f(480, 315);
+    glEnd();
+    // Entrance door
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glBegin(GL_POLYGON);
+    glVertex2f(360, 285);
+    glVertex2f(440, 285);
+    glVertex2f(440, 365);
+    glVertex2f(360, 365);
+    glEnd();
+    // Door mid-line
+    glColor3f(0.8f, 0.8f, 0.8f);
+    glBegin(GL_LINES);
+    glVertex2f(400, 285);
+    glVertex2f(400, 365);
+    glEnd();
+    // Roof top slab
+    glColor3f(0.1f, 0.1f, 0.1f);
+    glBegin(GL_POLYGON);
+    glVertex2f(235, 385);
+    glVertex2f(565, 385);
+    glVertex2f(565, 395);
+    glVertex2f(235, 395);
+    glEnd();
+    // Station name boar
+    glColor3f(0.0f, 0.2f, 0.4f);
+    glBegin(GL_POLYGON);
+    glVertex2f(300, 405);
+    glVertex2f(500, 405);
+    glVertex2f(500, 425);
+    glVertex2f(300, 425);
+    glEnd();
+    // Station name text
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2f(315, 407);
+    const char* stationName = "HILLSIDE STATION";
+    for (int i = 0; stationName[i] != '\0'; ++i)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, stationName[i]);
+}
+
+
+void ershad_drawHouse(float x, float y) {
+    // Base
+    glColor3f(0.1f, 0.1f, 0.4f); // Blue base
+    glBegin(GL_POLYGON);
+    glVertex2f(x - 5, y - 10);
+    glVertex2f(x + 105, y - 10);
+    glVertex2f(x + 100, y);
+    glVertex2f(x, y);
+    glEnd();
+
+    // Main Body
+    glColor3f(0.7f, 0.7f, 0.75f); // Light gray
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y);
+    glVertex2f(x + 100, y);
+    glVertex2f(x + 100, y + 60);
+    glVertex2f(x, y + 60);
+    glEnd();
+
+    // Roof
+    glColor3f(0.95f, 0.85f, 0.4f); // Darker gray
+    glBegin(GL_POLYGON);
+    glVertex2f(x - 10, y + 60);
+    glVertex2f(x + 110, y + 60);
+    glVertex2f(x + 100, y + 80);
+    glVertex2f(x, y + 80);
+    glEnd();
+
+    // Door
+    glColor3f(0.5f, 0.3f, 0.1f); // Brown door
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 40, y);
+    glVertex2f(x + 60, y);
+    glVertex2f(x + 60, y + 35);
+    glVertex2f(x + 40, y + 35);
+    glEnd();
+
+    // Windows
+    glColor3f(0.6f, 0.85f, 1.0f); // Blue-tinted windows
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 10, y + 35);
+    glVertex2f(x + 30, y + 35);
+    glVertex2f(x + 30, y + 55);
+    glVertex2f(x + 10, y + 55);
+    glEnd();
+
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 70, y + 35);
+    glVertex2f(x + 90, y + 35);
+    glVertex2f(x + 90, y + 55);
+    glVertex2f(x + 70, y + 55);
+    glEnd();
+}
+
+
+void ershad_drawFence(float startX, float endX, float baseY) {
+    float postWidth = 5.0f;
+    float postHeight = 30.0f;
+    float spacing = 15.0f;
+
+    glColor3f(0.6f, 0.4f, 0.2f); // Wooden brown
+
+    // Draw vertical posts
+    for (float x = startX; x <= endX; x += spacing) {
+        glBegin(GL_POLYGON);
+        glVertex2f(x, baseY);
+        glVertex2f(x + postWidth, baseY);
+        glVertex2f(x + postWidth, baseY + postHeight);
+        glVertex2f(x, baseY + postHeight);
+        glEnd();
+    }
+
+    // Draw two horizontal rails
+    glBegin(GL_QUADS);
+    glVertex2f(startX, baseY + 10);
+    glVertex2f(endX, baseY + 10);
+    glVertex2f(endX, baseY + 13);
+    glVertex2f(startX, baseY + 13);
+    glEnd();
+
+    glBegin(GL_QUADS);
+    glVertex2f(startX, baseY + 22);
+    glVertex2f(endX, baseY + 22);
+    glVertex2f(endX, baseY + 25);
+    glVertex2f(startX, baseY + 25);
+    glEnd();
+}
+
+
+void ershad_drawGrass() {
+    if (ershad_isDay)
+        glColor3f(0.15f, 0.5f, 0.15f); // Daytime bright green
+    else
+        glColor3f(0.05f, 0.2f, 0.05f); // Nighttime dark green
+
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 0);
+    glVertex2f(1000, 0);
+    glVertex2f(1000, 300);
+    glVertex2f(0, 300);
+    glEnd();
+}
+
+
+void ershad_drawBench(float x, float y, float scale) {
+    // Bench seat (main plank)
+    glColor3f(0.55f, 0.27f, 0.07f); // Brown wood color
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y);
+    glVertex2f(x + 40 * scale, y);
+    glVertex2f(x + 40 * scale, y + 5 * scale);
+    glVertex2f(x, y + 5 * scale);
+    glEnd();
+    // Bench back
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y + 5 * scale);
+    glVertex2f(x + 40 * scale, y + 5 * scale);
+    glVertex2f(x + 40 * scale, y + 15 * scale);
+    glVertex2f(x, y + 15 * scale);
+    glEnd();
+
+    // Bench legs (left)
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y);
+    glVertex2f(x + 5 * scale, y);
+    glVertex2f(x + 5 * scale, y - 10 * scale);
+    glVertex2f(x, y - 10 * scale);
+    glEnd();
+
+    // Bench legs (right)
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 35 * scale, y);
+    glVertex2f(x + 40 * scale, y);
+    glVertex2f(x + 40 * scale, y - 10 * scale);
+    glVertex2f(x + 35 * scale, y - 10 * scale);
+    glEnd();
+}
+
+
+void ershad_drawTree() {
+    // Tree base (brown rectangle)
+    glColor3f(0.55f, 0.27f, 0.07f); // Brown
+    glBegin(GL_QUADS);
+    glVertex2f(855.5f, 228.5f);    // C
+    glVertex2f(868.5f, 228.5f); // D
+    glVertex2f(868.5f, 263.5f);    // E
+    glVertex2f(855.5f, 263.5f);    // F
+    glEnd();
+    // Lower triangle leaves (dark green)
+    glColor3f(0.0f, 0.5f, 0.0f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(827.0f, 263.5f); // G
+    glVertex2f(894.0f, 263.5f);    // H
+    glVertex2f(862.0f, 311.5f);    // I
+    glEnd();
+    // Middle triangle leaves (green)
+    glBegin(GL_TRIANGLES);
+    glVertex2f(834.0f, 287.5f);    // J
+    glVertex2f(890.0f, 287.5f); // K
+    glVertex2f(862.0f, 335.5f);    // L
+    glEnd();
+    // Top triangle leaves (light green)
+    glColor3f(0.0f, 0.6f, 0.0f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(841.0f, 311.5f); // M
+    glVertex2f(883.0f, 311.5f);    // N
+    glVertex2f(862.0f, 359.5f);    // O
+    glEnd();
+}
+
+
+void ershad_drawRoad() {
+    // Road base
+    glColor3f(0.2f, 0.2f, 0.2f);
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 80);
+    glVertex2f(1000, 80);
+    glVertex2f(1000, 170);
+    glVertex2f(0, 170);
+    glEnd();
+
+    // Lane markings (white dashed lines)
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glLineWidth(3);
+    for (int i = 0; i < 1000; i += 80) {
+        glBegin(GL_LINES);
+        glVertex2f(i, 125);      // start of dash (middle of road)
+        glVertex2f(i + 40, 125); // end of dash
+        glEnd();
+    }
+}
+
+void ershad_drawStars() {
+    if (ershad_isDay) return;
+
+    glColor3f(1.0f, 1.0f, 1.0f);  // White stars
+    glPointSize(2.0f);
+    glBegin(GL_POINTS);
+    int starPositions[][2] = {
+        {100, 550}, {150, 530}, {200, 580}, {250, 520}, {300, 560},
+        {350, 545}, {400, 575}, {450, 510}, {500, 590}, {550, 525},
+        {600, 570}, {650, 535}, {700, 580}, {750, 520}, {800, 550},
+        {850, 530}, {900, 580}, {950, 540}, {990, 560}
+    };
+    for (auto& star : starPositions) {
+        glVertex2i(star[0], star[1]);
+    }
+
+    glEnd();
+}
+
+void ershad_drawMoon() {
+    if (ershad_isDay) return;
+
+    glColor3f(0.95f, 0.95f, 0.85f);
+    ershad_drawCircle(300, 500, 25); // Position and radius
+}
+
+//  street lights along the road
+void ershad_drawStreetLights() {
+    for (int i = 100; i < 900; i += 150) {
+        // Pole
+        glColor3f(0.3f, 0.3f, 0.3f); // Dark gray
+        glBegin(GL_POLYGON);
+        glVertex2f(i, 170);
+        glVertex2f(i + 5, 170);
+        glVertex2f(i + 5, 220);
+        glVertex2f(i, 220);
+        glEnd();
+
+        // Lamp head
+        glColor3f(0.7f, 0.7f, 0.7f); // Light gray
+        glBegin(GL_POLYGON);
+        glVertex2f(i - 5, 220);
+        glVertex2f(i + 10, 220);
+        glVertex2f(i + 10, 230);
+        glVertex2f(i - 5, 230);
+        glEnd();
+
+        // Light (only visible at night)
+        if (!ershad_isDay) {
+            glColor3f(1.0f, 1.0f, 0.8f); // Yellowish white
+            glBegin(GL_TRIANGLES);
+            glVertex2f(i - 5, 220);
+            glVertex2f(i + 10, 220);
+            glVertex2f(i + 2.5, 190);
+            glEnd();
+        }
+    }
+}
+
+
+// Clock & Building
+void ershad_drawClock(float cx, float cy, float radius) {
+    glColor3f(1.0, 1.0, 1.0);
+    ershad_drawCircle(cx, cy, radius);
+
+    glColor3f(0.0, 0.0, 0.0);
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i <= 100; ++i) {
+        float theta = 2.0f * 3.1416f * i / 100;
+        float x = radius * cos(theta);
+        float y = radius * sin(theta);
+        glVertex2f(cx + x, cy + y);
+    }
+    glEnd();
+
+    // Hour hand
+    glLineWidth(3);
+    glBegin(GL_LINES);
+    glVertex2f(cx, cy);
+    glVertex2f(cx + 0.5 * radius * cos(ershad_hourAngle), cy + 0.5 * radius * sin(ershad_hourAngle));
+    glEnd();
+    // Minute hand
+    glLineWidth(2);
+    glBegin(GL_LINES);
+    glVertex2f(cx, cy);
+    glVertex2f(cx + 0.75 * radius * cos(ershad_minuteAngle), cy + 0.75 * radius * sin(ershad_minuteAngle));
+    glEnd();
+
+    glLineWidth(1);
+}
+
+void ershad_drawClockTower() {
+    // Tower base
+    glColor3f(0.25f, 0.28f, 0.32f);
+    glBegin(GL_POLYGON);
+    glVertex2f(580, 275);
+    glVertex2f(610, 275);
+    glVertex2f(610, 405);
+    glVertex2f(580, 405);
+    glEnd();
+
+    // Clock housing
+    glColor3f(0.6f, 0.65f, 0.7f);
+    glBegin(GL_POLYGON);
+    glVertex2f(570, 405);
+    glVertex2f(620, 405);
+    glVertex2f(620, 445);
+    glVertex2f(570, 445);
+    glEnd();
+
+    // Roof
+    glColor3f(0.1f, 0.1f, 0.3f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(560, 445);
+    glVertex2f(630, 445);
+    glVertex2f(595, 475);
+    glEnd();
+
+    // Clock face
+    ershad_drawClock(595, 425, 15);
+}
+
+
+
+void ershad_drawCar() {
+     float x = ershad_carX;
+    float y = ershad_carY;
+    // Car body
+    glColor3f(0.8f, 0.1f, 0.1f);  // Red
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y);
+    glVertex2f(x + 80, y);
+    glVertex2f(x + 80, y + 30);
+    glVertex2f(x, y + 30);
+    glEnd();
+    // Roof
+    glColor3f(0.8f, 0.1f, 0.1f);
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 15, y + 30);
+    glVertex2f(x + 65, y + 30);
+    glVertex2f(x + 55, y + 50);
+    glVertex2f(x + 25, y + 50);
+    glEnd();
+    // Windows
+    glColor3f(0.6f, 0.8f, 1.0f);
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 20, y + 35);
+    glVertex2f(x + 40, y + 35);
+    glVertex2f(x + 40, y + 45);
+    glVertex2f(x + 20, y + 45);
+    glEnd();
+
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 45, y + 35);
+    glVertex2f(x + 60, y + 35);
+    glVertex2f(x + 60, y + 45);
+    glVertex2f(x + 45, y + 45);
+    glEnd();
+
+    // Wheels
+    glColor3f(0, 0, 0);
+    ershad_drawCircle(x + 20, y, 10);
+    ershad_drawCircle(x + 60, y, 10);
+}
+
+void ershad_drawCar2() {
+    float x = ershad_Car2X;
+    float y = ershad_carY;
+    // Car body - blue
+    glColor3f(0.1f, 0.1f, 0.8f);  // Blue
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y);
+    glVertex2f(x + 80, y);
+    glVertex2f(x + 80, y + 30);
+    glVertex2f(x, y + 30);
+    glEnd();
+    // Roof - blue
+    glColor3f(0.1f, 0.1f, 0.7f);
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 15, y + 30);
+    glVertex2f(x + 65, y + 30);
+    glVertex2f(x + 55, y + 50);
+    glVertex2f(x + 25, y + 50);
+    glEnd();
+    // Windows - light blue
+    glColor3f(0.6f, 0.8f, 1.0f);
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 20, y + 35);
+    glVertex2f(x + 40, y + 35);
+    glVertex2f(x + 40, y + 45);
+    glVertex2f(x + 20, y + 45);
+    glEnd();
+
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 45, y + 35);
+    glVertex2f(x + 60, y + 35);
+    glVertex2f(x + 60, y + 45);
+    glVertex2f(x + 45, y + 45);
+    glEnd();
+
+    // Wheels
+    glColor3f(0, 0, 0);
+    ershad_drawCircle(x + 20, y, 10);
+    ershad_drawCircle(x + 60, y, 10);
+}
+
+void ershad_drawWindmill() {
+    float x = 175.0f; // Position
+    float y = 300.0f;  // Base of windmill at ground level
+
+    // Tower (simple rectangle)
+    glColor3f(0.7f, 0.7f, 0.7f);
+    glBegin(GL_POLYGON);
+    glVertex2f(x - 10, y);
+    glVertex2f(x + 10, y);
+    glVertex2f(x + 10, y + 100);
+    glVertex2f(x - 10, y + 100);
+    glEnd();
+
+    // Hub (center of blades)
+    glColor3f(0.4f, 0.4f, 0.4f);
+    ershad_drawCircle(x, y + 100, 5);
+
+    // Rotating Blades (4 blades)
+    glPushMatrix();
+    glTranslatef(x, y + 100, 0);
+    glRotatef(ershad_windmill_angle, 0, 0, 1);
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+    for (int i = 0; i < 4; i++) {
+        glBegin(GL_POLYGON);
+        glVertex2f(0, 0);
+        glVertex2f(40, 5);
+        glVertex2f(60, 0);
+        glVertex2f(40, -5);
+        glEnd();
+        glRotatef(90, 0, 0, 1); // Rotate 90 degrees for next blade
+    }
+    glPopMatrix();
+}
+
+void ershad_drawCloud(float cx, float cy) {
+    glColor3f(1.0f, 1.0f, 1.0f); // White cloud
+
+    //multiple overlapping circles to form a cloud shape
+    ershad_drawCircle(cx, cy, 20);
+    ershad_drawCircle(cx + 25, cy + 10, 20);
+    ershad_drawCircle(cx + 50, cy, 20);
+    ershad_drawCircle(cx + 25, cy - 10, 20);
+}
+
+
+void ershad_drawSun() {
+    if (!ershad_isDay) return;
+    glColor3f(1.0f, 0.9f, 0.0f);
+    ershad_drawCircle(800, ershad_sunY, 30);
+}
+
+// Main Display
+void ershad_display() {
+    if (ershad_isDay)
+        glClearColor(0.53f, 0.81f, 0.98f, 1.0f);
+    else
+        glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    if (ershad_isDay)
+    {
+    ershad_drawCloud(ershad_cloudX1, 520);
+    ershad_drawCloud(ershad_cloudX2, 560);
+    ershad_drawCloud(ershad_cloudX3, 530);
+    }
+
+    ershad_drawSun();
+    ershad_drawMountains();
+
+    ershad_drawGrass();
+    ershad_drawplatform();
+    ershad_drawRailwayTrack();
+    ershad_drawTrain();
+    ershad_drawStation();
+    ershad_drawHouse(100, 300);
+    ershad_drawHouse(700, 300);
+    ershad_drawFence(0, 1000, 240); // Fence along the railway track
+    ershad_drawBench(800, 240, 0.8f);
+    ershad_drawTree();
+    ershad_drawRoad();
+    ershad_drawCar();
+    ershad_drawCar2();
+    ershad_drawWindmill();
+    ershad_drawStreetLights();
+    ershad_drawClockTower();
+    ershad_drawMoon();
+    ershad_drawStars();
+
+
+    glutSwapBuffers(); // Swap the front and back buffers
+}
+
+void ershad_update(int value) {
+    // Train movement
+    if (ershad_trainMoving) {
+        ershad_trainX += 1;
+        if (ershad_trainX > 1000)
+            ershad_trainX = -480;
+    }
+
+    // Day/Night Cycle
+    if (ershad_sunRising) {
+        ershad_sunY += 0.5f;
+        if (ershad_sunY >= 550.0f) {
+            ershad_sunY = 550.0f;
+            ershad_sunRising = false;
+            ershad_isDay = true;
+        }
+    } else {
+        ershad_sunY -= 0.5f;
+        if (ershad_sunY <= 50.0f) {
+            ershad_sunY = 50.0f;
+            ershad_sunRising = true;
+            ershad_isDay = false;
+        }
+    }
+
+    // Clock animation
+    ershad_minuteAngle -= 0.05f; // Adjust speed as needed
+    ershad_hourAngle -= (0.05f / 12.0f);
+
+    // Car movement
+    ershad_carX += 0.8f;
+    if (ershad_carX > 1000)
+        ershad_carX = -100;
+
+    ershad_Car2X += 1.2f;
+    if (ershad_Car2X > 1000)
+        ershad_Car2X = -400;
+
+    // Cloud movement
+    ershad_cloudX1 += 0.3f;
+    if (ershad_cloudX1 > 1100) ershad_cloudX1 = -150;
+    ershad_cloudX2 += 0.2f;
+    if (ershad_cloudX2 > 1100) ershad_cloudX2 = -150;
+    ershad_cloudX3 += 0.25f;
+    if (ershad_cloudX3 > 1100) ershad_cloudX3 = -150;
+
+
+    // Windmill rotation
+    ershad_windmill_angle += 2.0f; // Rotate 2 degrees per update
+
+    glutPostRedisplay(); // Request a redraw
+    glutTimerFunc(16, ershad_update, 0); // Call update again in 16ms (approx 60fps)
+}
+
+void ershad_keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+        case 't': case 'T':
+            ershad_trainMoving = !ershad_trainMoving;
+            break;
+        case 'd': case 'D':
+            ershad_isDay = true;
+            ershad_sunY = 550.0f; // Set sun to top for day
+            ershad_sunRising = false; // Stop day/night cycle
+            break;
+        case 'n': case 'N':
+            ershad_isDay = false;
+            ershad_sunY = 50.0f; // Set sun to bottom for night
+            ershad_sunRising = true; // Stop day/night cycle
+            break;
+        case 'c': case 'C':
+            ershad_sunRising = !ershad_sunRising; // Toggle day/night cycle
+            break;
+
+    }
+    glutPostRedisplay(); // Request a redraw after keyboard input
+}
+
+void ershad_reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1000, 0, 600); // Set up 2D orthographic projection
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+// ==============================================================================
+// SCENE 2 FUNCTIONS (Prefix: ehsan)
+// ==============================================================================
+
+void ehsan_drawTrainBridge() {
+    // Bridge pillars
+    glColor3f(0.5f, 0.4f, 0.3f); // Brownish grey for concrete
+    for (int i = 0; i <= 1000; i += 100) {
+        glBegin(GL_QUADS);
+        glVertex2f(i, ehsan_RAILWAY_BASE_Y);
+        glVertex2f(i + 20, ehsan_RAILWAY_BASE_Y);
+        glVertex2f(i + 20, ehsan_RAILWAY_BASE_Y - ehsan_TRAIN_BRIDGE_HEIGHT);
+        glVertex2f(i, ehsan_RAILWAY_BASE_Y - ehsan_TRAIN_BRIDGE_HEIGHT);
+        glEnd();
+    }
+
+    // Bridge deck
+    glColor3f(0.6f, 0.5f, 0.4f); // Lighter brown for the deck
+    glBegin(GL_QUADS);
+    glVertex2f(0, ehsan_TRAIN_BRIDGE_DECK_Y);
+    glVertex2f(1000, ehsan_TRAIN_BRIDGE_DECK_Y);
+    glVertex2f(1000, ehsan_TRAIN_BRIDGE_DECK_Y + 5);
+    glVertex2f(0, ehsan_TRAIN_BRIDGE_DECK_Y + 5);
+    glEnd();
+}
+
+void ehsan_drawRailway() {
+    float railBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) {
+        railBrightnessFactor = 0.6f;
+    }
+    if (ehsan_isRaining) railBrightnessFactor *= 0.7f;
+
+    // Ballast
+    glBegin(GL_QUADS);
+    glColor3f(0.3f * railBrightnessFactor, 0.3f * railBrightnessFactor, 0.3f * railBrightnessFactor);
+    glVertex2f(0, ehsan_RAILWAY_BASE_Y);
+    glVertex2f(1000, ehsan_RAILWAY_BASE_Y);
+    glVertex2f(1000, ehsan_RAILWAY_BASE_Y + 5);
+    glVertex2f(0, ehsan_RAILWAY_BASE_Y + 5); // Thinner ballast
+    glEnd();
+
+    // Rails
+    glBegin(GL_LINES);
+    glColor3f(0.8f * railBrightnessFactor, 0.8f * railBrightnessFactor, 0.8f * railBrightnessFactor);
+    glLineWidth(3.0f);
+    glVertex2f(0, ehsan_RAILWAY_BASE_Y + 2);
+    glVertex2f(1000, ehsan_RAILWAY_BASE_Y + 2);
+    glVertex2f(0, ehsan_RAILWAY_BASE_Y + 8);
+    glVertex2f(1000, ehsan_RAILWAY_BASE_Y + 8);
+    glEnd();
+
+    // Sleepers
+    glColor3f(0.5f * railBrightnessFactor, 0.2f * railBrightnessFactor, 0.0f * railBrightnessFactor);
+    glLineWidth(5.0f);
+    for (int i = 0; i < 1000; i += 20) {
+        glBegin(GL_LINES);
+        glVertex2f(i, ehsan_RAILWAY_BASE_Y + 2);
+        glVertex2f(i, ehsan_RAILWAY_BASE_Y + 8);
+        glEnd();
+    }
+}
+
+
+void ehsan_drawLamppost(float x, float y) {
+    float lamppostBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) lamppostBrightnessFactor = 0.8f;
+    if (ehsan_isRaining) lamppostBrightnessFactor *= 0.7f;
+
+    // Pole
+    glColor3f(0.2f * lamppostBrightnessFactor, 0.2f * lamppostBrightnessFactor, 0.2f * lamppostBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + 5, y);
+    glVertex2f(x + 5, y + 50);
+    glVertex2f(x, y + 50);
+    glEnd();
+
+    // Arm
+    float armLength = 20.0f;
+    float armHeight = 50.0f;
+    glBegin(GL_QUADS);
+    glVertex2f(x + 5, y + armHeight);
+    glVertex2f(x + 5 + armLength, y + armHeight);
+    glVertex2f(x + 5 + armLength, y + armHeight + 5);
+    glVertex2f(x + 5, y + armHeight + 5);
+    glEnd();
+
+    // Light
+    if (ehsan_lamppostsOn) {
+        glColor3f(1.0f * lamppostBrightnessFactor, 1.0f * lamppostBrightnessFactor, 0.8f * lamppostBrightnessFactor); // Yellowish light
+        glBegin(GL_POLYGON);
+        glVertex2f(x + armLength, y + armHeight + 5);
+        glVertex2f(x + armLength + 10, y + armHeight + 5);
+        glVertex2f(x + armLength + 5, y + armHeight - 5);
+        glEnd();
+    } else {
+        glColor3f(0.2f * lamppostBrightnessFactor, 0.2f * lamppostBrightnessFactor, 0.2f * lamppostBrightnessFactor); // Off light
+        glBegin(GL_POLYGON);
+        glVertex2f(x - 5, y + armHeight + 5);
+        glVertex2f(x + 10, y + armHeight + 5);
+        glVertex2f(x + 15, y + armHeight + 15);
+        glVertex2f(x - 10, y + armHeight + 15);
+        glEnd();
+    }
+}
+
+void ehsan_drawWindmill(float x, float y, float scale, float angle) {
+    float wmBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) wmBrightnessFactor = 0.6f;
+    if (ehsan_isRaining) wmBrightnessFactor *= 0.6f;
+
+    float newScale = scale * 3.0f; // Overall scaling
+    glPushMatrix();
+    glTranslatef(x, y, 0); // Use the passed y directly
+    glScalef(newScale, newScale, 1.0f);
+
+    // Thinner Tower
+    glColor3f(0.6f * wmBrightnessFactor, 0.4f * wmBrightnessFactor, 0.2f * wmBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(-5, 0); // Thinner base
+    glVertex2f(5, 0); // Thinner base
+    glVertex2f(2.5, 80); // Thinner top
+    glVertex2f(-2.5, 80); // Thinner top
+    glEnd();
+
+    // Hub
+    drawCircle(0, 80, 8, 20, 0.3f * wmBrightnessFactor, 0.3f * wmBrightnessFactor, 0.3f * wmBrightnessFactor);
+
+    glPushMatrix();
+    glTranslatef(0, 80, 0);
+    glRotatef(angle, 0, 0, 1);
+    glColor3f(0.8f * wmBrightnessFactor, 0.8f * wmBrightnessFactor, 0.8f * wmBrightnessFactor); // Blades
+    glBegin(GL_QUADS);
+    glVertex2f(-5, -5);
+    glVertex2f(5, -5);
+    glVertex2f(40, -15);
+    glVertex2f(30, -25); // Blade 1
+    glEnd();
+
+    glBegin(GL_QUADS);
+    glVertex2f(-5, 5);
+    glVertex2f(5, 5);
+    glVertex2f(30, 25);
+    glVertex2f(40, 15); // Blade 2
+    glEnd();
+
+    glBegin(GL_QUADS);
+    glVertex2f(5, 5);
+    glVertex2f(5, -5);
+    glVertex2f(15, -40);
+    glVertex2f(25, -30); // Blade 3
+    glEnd();
+
+    glBegin(GL_QUADS);
+    glVertex2f(-5, 5);
+    glVertex2f(-5, -5);
+    glVertex2f(-15, 40);
+    glVertex2f(-25, 30); // Blade 4
+    glEnd();
+
+    glPopMatrix();
+    glPopMatrix();
+}
+
+
+void ehsan_drawSignpost(float x, float y) {
+    float signBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) signBrightnessFactor = 0.7f;
+    if (ehsan_isRaining) signBrightnessFactor *= 0.7f;
+
+    // Pole
+    glColor3f(0.2f * signBrightnessFactor, 0.2f * signBrightnessFactor, 0.1f * signBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + 3, y);
+    glVertex2f(x + 3, y + 25);
+    glVertex2f(x, y + 25);
+    glEnd();
+
+    // Signboard
+    glColor3f(0.8f * signBrightnessFactor, 0.8f * signBrightnessFactor, 0.8f * signBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(x - 15, y + 25);
+    glVertex2f(x + 18, y + 25);
+    glVertex2f(x + 18, y + 35);
+    glVertex2f(x - 15, y + 35);
+    glEnd();
+
+    // Example text/symbol on sign
+    glColor3f(0.1f, 0.1f, 0.1f); // Dark color for symbol
+    glBegin(GL_TRIANGLES);
+    glVertex2f(x - 5, y + 28);
+    glVertex2f(x + 5, y + 28);
+    glVertex2f(x, y + 33);
+    glEnd();
+}
+
+void ehsan_drawRoad() {
+    float roadBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) {
+        roadBrightnessFactor = 0.5f;
+    }
+    if (ehsan_isRaining) roadBrightnessFactor *= 0.8f;
+
+    glColor3f(0.3f * roadBrightnessFactor, 0.3f * roadBrightnessFactor, 0.3f * roadBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(0, ehsan_ROAD_BOTTOM_Y);
+    glVertex2f(1000, ehsan_ROAD_BOTTOM_Y);
+    glVertex2f(1000, ehsan_ROAD_TOP_Y);
+    glVertex2f(0, ehsan_ROAD_TOP_Y);
+    glEnd();
+
+    // Road markings
+    glColor3f(1.0f * roadBrightnessFactor, 1.0f * roadBrightnessFactor, 0.0f); // Yellow lines
+    glLineWidth(3.0f);
+    for (int i = 0; i < 1000; i += 40) {
+        glBegin(GL_LINES);
+        glVertex2f(i, (ehsan_ROAD_BOTTOM_Y + ehsan_ROAD_TOP_Y) / 2);
+        glVertex2f(i + 20, (ehsan_ROAD_BOTTOM_Y + ehsan_ROAD_TOP_Y) / 2);
+        glEnd();
+    }
+}
+
+void ehsan_drawRealisticCar(float x, float y, float r, float g, float b, int direction) {
+    float carBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) carBrightnessFactor = 0.7f;
+    if (ehsan_isRaining) carBrightnessFactor *= 0.8f;
+
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    if (direction == -1) {
+        glScalef(-1.0f, 1.0f, 1.0f); // Flip horizontally for left direction
+        glTranslatef(-80, 0, 0); // Adjust position after flipping
+    }
+
+    // Body
+    glColor3f(r * carBrightnessFactor, g * carBrightnessFactor, b * carBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 10);
+    glVertex2f(80, 10);
+    glVertex2f(80, 40);
+    glVertex2f(0, 40);
+    glEnd();
+
+    // Roof
+    glBegin(GL_POLYGON);
+    glVertex2f(15, 40);
+    glVertex2f(65, 40);
+    glVertex2f(55, 60);
+    glVertex2f(25, 60);
+    glEnd();
+
+    // Windows
+    glColor3f(0.6f * carBrightnessFactor, 0.8f * carBrightnessFactor, 1.0f * carBrightnessFactor);
+    glBegin(GL_QUADS); // Front window
+    glVertex2f(25, 42);
+    glVertex2f(55, 42);
+    glVertex2f(50, 55);
+    glVertex2f(30, 55);
+    glEnd();
+
+    glBegin(GL_QUADS); // Side window
+    glVertex2f(5, 30);
+    glVertex2f(20, 30);
+    glVertex2f(20, 40);
+    glVertex2f(5, 40);
+    glEnd();
+
+    // Wheels
+    glColor3f(0.1f, 0.1f, 0.1f);
+    drawCircle(20, 10, 8);
+    drawCircle(60, 10, 8);
+
+    glPopMatrix();
+}
+
+void ehsan_drawRealisticBus(float x, float y, int direction) {
+    float busBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) busBrightnessFactor = 0.7f;
+    if (ehsan_isRaining) busBrightnessFactor *= 0.8f;
+
+    float BUS_COLOR_R = 0.9f;
+    float BUS_COLOR_G = 0.5f;
+    float BUS_COLOR_B = 0.1f;
+
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    if (direction == -1) {
+        glScalef(-1.0f, 1.0f, 1.0f); // Flip horizontally for left direction
+        glTranslatef(-150, 0, 0); // Adjust position after flipping
+    }
+
+    // Main body
+    glColor3f(BUS_COLOR_R * busBrightnessFactor, BUS_COLOR_G * busBrightnessFactor, BUS_COLOR_B * busBrightnessFactor);
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 10);
+    glVertex2f(150, 10);
+    glVertex2f(150, 60);
+    glVertex2f(140, 70);
+    glVertex2f(10, 70);
+    glVertex2f(0, 60);
+    glEnd();
+
+    // Windows
+    glColor3f(0.7f * busBrightnessFactor, 0.9f * busBrightnessFactor, 1.0f * busBrightnessFactor);
+    for (int i = 0; i < 3; ++i) {
+        drawRectangle(20 + i * 40, 40, 30, 20, 0.7f, 0.9f, 1.0f);
+    }
+
+    // Wheels
+    glColor3f(0.1f, 0.1f, 0.1f);
+    drawCircle(30, 10, 12);
+    drawCircle(120, 10, 12);
+    glPopMatrix();
+}
+
+void ehsan_drawBoat(float x, float y, int type) {
+    float boatBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) boatBrightnessFactor = 0.7f;
+    if (ehsan_isRaining) boatBrightnessFactor *= 0.8f;
+
+    if (type == 1) { // Modern boat
+        // Hull
+        glColor3f(0.4f * boatBrightnessFactor, 0.2f * boatBrightnessFactor, 0.0f * boatBrightnessFactor); // Dark brown
+        glBegin(GL_POLYGON);
+        glVertex2f(x, y);
+        glVertex2f(x + 100, y);
+        glVertex2f(x + 90, y + 30);
+        glVertex2f(x + 10, y + 30);
+        glEnd();
+        // Cabin
+        glColor3f(0.7f * boatBrightnessFactor, 0.7f * boatBrightnessFactor, 0.7f * boatBrightnessFactor); // Grey
+        glBegin(GL_POLYGON);
+        glVertex2f(x + 20, y + 30);
+        glVertex2f(x + 80, y + 30);
+        glVertex2f(x + 70, y + 50);
+        glVertex2f(x + 30, y + 50);
+        glEnd();
+        // Window
+        glColor3f(0.6f * boatBrightnessFactor, 0.8f * boatBrightnessFactor, 1.0f * boatBrightnessFactor);
+        drawRectangle(x + 40, y + 35, 20, 10, 0.6f, 0.8f, 1.0f);
+    } else { // Traditional boat
+        // Hull
+        glColor3f(0.6f * boatBrightnessFactor, 0.3f * boatBrightnessFactor, 0.1f * boatBrightnessFactor); // Brown
+        glBegin(GL_POLYGON);
+        glVertex2f(x, y);
+        glVertex2f(x + 120, y);
+        glVertex2f(x + 100, y + 25);
+        glVertex2f(x + 20, y + 25);
+        glEnd();
+        // Mast
+        glColor3f(0.4f * boatBrightnessFactor, 0.2f * boatBrightnessFactor, 0.0f * boatBrightnessFactor);
+        drawRectangle(x + 60, y + 25, 5, 50, 0.4f, 0.2f, 0.0f);
+        // Sail
+        glColor3f(1.0f * boatBrightnessFactor, 1.0f * boatBrightnessFactor, 1.0f * boatBrightnessFactor);
+        glBegin(GL_TRIANGLES);
+        glVertex2f(x + 65, y + 70);
+        glVertex2f(x + 65, y + 30);
+        glVertex2f(x + 95, y + 50);
+        glEnd();
+    }
+}
+
+void ehsan_initRain() {
+    ehsan_raindrops.clear();
+    for (int i = 0; i < 1000; ++i) {
+        ehsan_Raindrop drop;
+        drop.x = rand() % 1000;
+        drop.y = rand() % 600 + 150; // Start drops above visible area
+        drop.speed = 5 + rand() % 10;
+        drop.length = 5 + rand() % 10;
+        ehsan_raindrops.push_back(drop);
+    }
+}
+
+void ehsan_drawRain() {
+    if (!ehsan_isRaining) return;
+
+    glColor3f(0.5, 0.5, 1.0); // Blueish raindrops
+    glBegin(GL_LINES);
+    for (auto& drop : ehsan_raindrops) {
+        glVertex2f(drop.x, drop.y);
+        glVertex2f(drop.x - 2, drop.y - drop.length); // Slanted drops
+    }
+    glEnd();
+}
+
+void ehsan_updateRain() {
+    if (!ehsan_isRaining) return;
+
+    for (auto& drop : ehsan_raindrops) {
+        drop.x += 2.0; // Simulate wind
+        drop.y -= drop.speed;
+        if (drop.y < 0) { // Reset if off screen
+            drop.x = rand() % 1000;
+            drop.y = rand() % 600 + 150;
+            drop.speed = 5 + rand() % 10;
+            drop.length = 5 + rand() % 10;
+        }
+    }
+}
+
+void ehsan_drawHospital(float x, float y, float width, float height) {
+    drawRectangle(x, y, width, height, 0.95, 0.95, 0.95); // Hospital body
+
+    glColor3f(1.0, 0.0, 0.0); // Red cross symbol
+    float crossX = x + width / 2 - 5;
+    float crossY = y + height / 2 - 5;
+
+    drawRectangle(crossX, crossY, 10, 30, 1.0, 0.0, 0.0); // Vertical bar
+    drawRectangle(crossX - 10, crossY + 10, 30, 10, 1.0, 0.0, 0.0); // Horizontal bar
+
+    // Windows (simple rectangles)
+    glColor3f(0.5, 0.7, 0.9); // Blueish for windows
+    drawRectangle(x + 10, y + 10, 20, 20, 0.5, 0.7, 0.9);
+    drawRectangle(x + width - 30, y + 10, 20, 20, 0.5, 0.7, 0.9);
+    drawRectangle(x + 10, y + height - 30, 20, 20, 0.5, 0.7, 0.9);
+    drawRectangle(x + width - 30, y + height - 30, 20, 20, 0.5, 0.7, 0.9);
+}
+
+void ehsan_getSkyColor(float hour, float* color) {
+    if (hour >= 6.0f && hour < 18.0f) { // Day
+        color[0] = 0.53f; color[1] = 0.81f; color[2] = 0.98f;
+    } else { // Night
+        color[0] = 0.0f; color[1] = 0.0f; color[2] = 0.1f;
+    }
+}
+
+void ehsan_drawStars() {
+    if (!(ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f)) return; // Only show at night
+
+    glColor3f(1.0f, 1.0f, 1.0f);  // White stars
+    glPointSize(2.0f);
+    glBegin(GL_POINTS);
+    int starPositions[][2] = {
+        {100, 550}, {150, 530}, {200, 580}, {250, 520}, {300, 560},
+        {350, 545}, {400, 575}, {450, 510}, {500, 590}, {550, 525},
+        {600, 570}, {650, 535}, {700, 580}, {750, 520}, {800, 550},
+        {850, 530}, {900, 580}, {950, 540}, {990, 560}
+    };
+    for (auto& star : starPositions) {
+        glVertex2i(star[0], star[1]);
+    }
+
+    glEnd();
+}
+
+void ehsan_drawMoon() {
+    if (!(ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f)) return; // Only show at night
+    glColor3f(0.95f, 0.95f, 0.85f);
+    drawCircle(300, 500, 25);
+}
+
+void ehsan_drawSun() {
+    if (ehsan_currentHour < 6.0f || ehsan_currentHour >= 18.0f) return; // Only show during day
+    glColor3f(1.0f, 0.9f, 0.0f);
+    drawCircle(800, 500, 30);
+}
+
+void ehsan_drawClouds() {
+    float cloudBrightnessFactor = 1.0f;
+    if (ehsan_isRaining) cloudBrightnessFactor = 0.7f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) cloudBrightnessFactor *= 0.8f;
+
+    glColor3f(1.0f * cloudBrightnessFactor, 1.0f * cloudBrightnessFactor, 1.0f * cloudBrightnessFactor);
+
+    drawCircle(150, 500, 30);
+    drawCircle(180, 510, 25);
+    drawCircle(210, 500, 30);
+    drawCircle(165, 490, 20);
+
+    drawCircle(550, 550, 35);
+    drawCircle(585, 560, 30);
+    drawCircle(615, 550, 35);
+    drawCircle(570, 540, 25);
+}
+
+
+void ehsan_drawMountains() {
+    float mountainBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) mountainBrightnessFactor = 0.5f;
+    if (ehsan_isRaining) mountainBrightnessFactor *= 0.7f;
+
+    glBegin(GL_TRIANGLES);
+    glColor3f(0.4f * mountainBrightnessFactor, 0.3f * mountainBrightnessFactor, 0.2f * mountainBrightnessFactor);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y + 150);
+    glVertex2f(200, ehsan_GROUND_LEVEL_Y + 350);
+    glVertex2f(400, ehsan_GROUND_LEVEL_Y + 150);
+
+    glColor3f(0.35f * mountainBrightnessFactor, 0.25f * mountainBrightnessFactor, 0.15f * mountainBrightnessFactor);
+    glVertex2f(300, ehsan_GROUND_LEVEL_Y + 150);
+    glVertex2f(550, ehsan_GROUND_LEVEL_Y + 400);
+    glVertex2f(800, ehsan_GROUND_LEVEL_Y + 150);
+
+    glColor3f(0.45f * mountainBrightnessFactor, 0.35f * mountainBrightnessFactor, 0.25f * mountainBrightnessFactor);
+    glVertex2f(700, ehsan_GROUND_LEVEL_Y + 150);
+    glVertex2f(900, ehsan_GROUND_LEVEL_Y + 380);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y + 150);
+    glEnd();
+}
+
+void ehsan_drawGround() {
+    float groundBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) groundBrightnessFactor = 0.5f;
+    if (ehsan_isRaining) groundBrightnessFactor *= 0.8f;
+
+    glColor3f(0.2f * groundBrightnessFactor, 0.6f * groundBrightnessFactor, 0.2f * groundBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y + 150);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y + 150);
+    glEnd();
+}
+
+void ehsan_drawRiverside() {
+    float riversideBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) riversideBrightnessFactor = 0.6f;
+    if (ehsan_isRaining) riversideBrightnessFactor *= 0.8f;
+
+    glColor3f(0.3f * riversideBrightnessFactor, 0.4f * riversideBrightnessFactor, 0.2f * riversideBrightnessFactor); // Darker green/brown
+    glBegin(GL_QUADS);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y + 30);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y + 30);
+    glEnd();
+}
+
+void ehsan_drawRiver() {
+    float riverBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) riverBrightnessFactor = 0.4f;
+    if (ehsan_isRaining) riverBrightnessFactor *= 1.2f; // Brighter if raining, reflecting more light
+
+    glColor3f(0.1f * riverBrightnessFactor, 0.3f * riverBrightnessFactor, 0.7f * riverBrightnessFactor);
+    glBegin(GL_QUADS);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y);
+    glVertex2f(1000, ehsan_GROUND_LEVEL_Y + 80);
+    glVertex2f(0, ehsan_GROUND_LEVEL_Y + 80);
+    glEnd();
+}
+
+void ehsan_drawTrees() {
+    float treeBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) treeBrightnessFactor = 0.6f;
+    if (ehsan_isRaining) treeBrightnessFactor *= 0.8f;
+
+    // Tree 1
+    glColor3f(0.5f * treeBrightnessFactor, 0.3f * treeBrightnessFactor, 0.1f * treeBrightnessFactor); // Trunk
+    drawRectangle(50, ehsan_GROUND_LEVEL_Y + 30, 10, 40, 0.5f, 0.3f, 0.1f);
+    glColor3f(0.1f * treeBrightnessFactor, 0.7f * treeBrightnessFactor, 0.2f * treeBrightnessFactor); // Leaves
+    drawCircle(55, ehsan_GROUND_LEVEL_Y + 85, 20);
+    drawCircle(45, ehsan_GROUND_LEVEL_Y + 80, 18);
+    drawCircle(65, ehsan_GROUND_LEVEL_Y + 80, 18);
+
+    // Tree 2
+    glColor3f(0.5f * treeBrightnessFactor, 0.3f * treeBrightnessFactor, 0.1f * treeBrightnessFactor); // Trunk
+    drawRectangle(900, ehsan_GROUND_LEVEL_Y + 30, 10, 40, 0.5f, 0.3f, 0.1f);
+    glColor3f(0.1f * treeBrightnessFactor, 0.7f * treeBrightnessFactor, 0.2f * treeBrightnessFactor); // Leaves
+    drawCircle(905, ehsan_GROUND_LEVEL_Y + 85, 20);
+    drawCircle(895, ehsan_GROUND_LEVEL_Y + 80, 18);
+    drawCircle(915, ehsan_GROUND_LEVEL_Y + 80, 18);
+}
+
+
+void ehsan_drawTrain() {
+    float trainBrightnessFactor = 1.0f;
+    if (ehsan_currentHour > 18.0f || ehsan_currentHour < 6.0f) trainBrightnessFactor = 0.7f;
+    if (ehsan_isRaining) trainBrightnessFactor *= 0.8f;
+
+    // Locomotive
+    glColor3f(0.8f * trainBrightnessFactor, 0.1f * trainBrightnessFactor, 0.1f * trainBrightnessFactor); // Red
+    glBegin(GL_POLYGON);
+    glVertex2f(ehsan_trainX, ehsan_RAILWAY_BASE_Y + 10);
+    glVertex2f(ehsan_trainX + 80, ehsan_RAILWAY_BASE_Y + 10);
+    glVertex2f(ehsan_trainX + 80, ehsan_RAILWAY_BASE_Y + 50);
+    glVertex2f(ehsan_trainX, ehsan_RAILWAY_BASE_Y + 50);
+    glEnd();
+    // Wheels
+    glColor3f(0.1f, 0.1f, 0.1f);
+    drawCircle(ehsan_trainX + 20, ehsan_RAILWAY_BASE_Y + 10, 8);
+    drawCircle(ehsan_trainX + 60, ehsan_RAILWAY_BASE_Y + 10, 8);
+}
+
+// Main display function
+void ehsan_display() {
+    float skyColor[3];
+    ehsan_getSkyColor(ehsan_currentHour, skyColor);
+    if (ehsan_isRaining) {
+        skyColor[0] *= 0.8f;
+        skyColor[1] *= 0.8f;
+        skyColor[2] *= 0.8f;
+    }
+    glClearColor(skyColor[0], skyColor[1], skyColor[2], 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ehsan_isNightTime = (ehsan_currentHour >= 20.0f || ehsan_currentHour < 6.0f);
+    if (ehsan_isNightTime) {
+        ehsan_lamppostsOn = true; // Ensure lampposts are on during night
+    } else {
+        ehsan_lamppostsOn = false; // Only turn off if not explicitly set by user.
+    }
+
+    ehsan_drawStars();
+    ehsan_drawMoon();
+    ehsan_drawSun();
+    ehsan_drawClouds();
+    ehsan_drawMountains();
+    ehsan_drawGround();
+    ehsan_drawRiverside();
+    ehsan_drawRiver();
+    ehsan_drawTrees();
+
+    // Windmills adjusted to be smaller, thinner, and connected to the ground
+    ehsan_drawWindmill(200, ehsan_GROUND_LEVEL_Y + 30, 0.3f, ehsan_windmillBladeAngle1);
+    ehsan_drawWindmill(700, ehsan_GROUND_LEVEL_Y + 30, 0.3f, ehsan_windmillBladeAngle2);
+
+    ehsan_drawTrainBridge(); // This is the road bridge over the river
+    ehsan_drawRailway();
+    ehsan_drawTrain(); // Train is now on the new train bridge
+
+    ehsan_drawRoad();
+    // Cars and bus are now positioned relative to the new ROAD_BOTTOM_Y
+    ehsan_drawRealisticCar(ehsan_carPositions[0], ehsan_ROAD_BOTTOM_Y + 5, 0.0f, 0.0f, 1.0f, ehsan_carDirections[0]); // Blue car
+    ehsan_drawRealisticCar(ehsan_carPositions[1], ehsan_ROAD_BOTTOM_Y + 5, 0.7f, 0.7f, 0.0f, ehsan_carDirections[1]); // Yellow car
+    ehsan_drawRealisticCar(ehsan_carPositions[2], ehsan_ROAD_BOTTOM_Y + 5, 0.8f, 0.2f, 0.6f, ehsan_carDirections[2]); // Purple car
+    ehsan_drawRealisticCar(ehsan_carPositions[3], ehsan_ROAD_BOTTOM_Y + 5, 0.1f, 0.5f, 0.1f, ehsan_carDirections[3]); // Green car
+    ehsan_drawRealisticBus(ehsan_busPosition, ehsan_ROAD_BOTTOM_Y + 5, ehsan_busDirection);
+
+    ehsan_drawSignpost(150, ehsan_ROAD_TOP_Y);
+    ehsan_drawSignpost(850, ehsan_ROAD_TOP_Y);
+
+    // Draw two different boats
+    ehsan_drawBoat(ehsan_boatPos1, ehsan_boatY1, 1); // Type 1: Modern boat
+    ehsan_drawBoat(ehsan_boatPos2, ehsan_boatY2, 2); // Type 2: Traditional boat
+
+    ehsan_drawRain();
+
+    // Lampposts placed along the TRAIN LINE
+    // These are on the bridge, so their "ground" is RAILWAY_BASE_Y
+    ehsan_drawLamppost(100, ehsan_RAILWAY_BASE_Y + 10); // +10 to sit just above the rail ties
+    ehsan_drawLamppost(350, ehsan_RAILWAY_BASE_Y + 10);
+    ehsan_drawLamppost(600, ehsan_RAILWAY_BASE_Y + 10);
+    ehsan_drawLamppost(850, ehsan_RAILWAY_BASE_Y + 10);
+
+    // Lampposts placed along the ROADSIDE
+    // Their base is now at GROUND_LEVEL_Y to connect to the ground
+    ehsan_drawLamppost(50, ehsan_GROUND_LEVEL_Y);
+    ehsan_drawLamppost(250, ehsan_GROUND_LEVEL_Y);
+    ehsan_drawLamppost(450, ehsan_GROUND_LEVEL_Y);
+    ehsan_drawLamppost(700, ehsan_GROUND_LEVEL_Y);
+    ehsan_drawLamppost(950, ehsan_GROUND_LEVEL_Y);
+
+    // Hospital Example
+    ehsan_drawHospital(400, ehsan_GROUND_LEVEL_Y + 150, 150, 100);
+
+    glutSwapBuffers();
+}
+
+// Update logic
+void ehsan_update(int value) {
+    // Train movement
+    if (ehsan_isTrainMoving) {
+        ehsan_trainX += 1;
+        // if (!ehsan_isTrainSoundPlaying) { ehsan_playTrainSound(); } // Not implemented sound
+        // if (rand() % 500 == 0) { ehsan_playTrainWhistle(); } // Not implemented sound
+    } else {
+        // if (ehsan_isTrainSoundPlaying) { ehsan_stopTrainSound(); } // Not implemented sound
+    }
+    if (ehsan_trainX > 1000) ehsan_trainX = -480;
+
+    // Car movement
+    for (int i = 0; i < 4; ++i) {
+        ehsan_carPositions[i] += ehsan_carDirections[i] * (0.5f + (i * 0.2f));
+        if (ehsan_carDirections[i] == 1 && ehsan_carPositions[i] > 1000) {
+            ehsan_carPositions[i] = -100;
+        } else if (ehsan_carDirections[i] == -1 && ehsan_carPositions[i] < -100) {
+            ehsan_carPositions[i] = 1000;
+        }
+    }
+
+    // Bus movement
+    ehsan_busPosition += ehsan_busDirection * 0.7f;
+    if (ehsan_busDirection == 1 && ehsan_busPosition > 1000) {
+        ehsan_busPosition = -200;
+    } else if (ehsan_busDirection == -1 && ehsan_busPosition < -200) {
+        ehsan_busPosition = 1000;
+    }
+
+    // Windmill blade rotation
+    ehsan_windmillBladeAngle1 += 2.0f;
+    ehsan_windmillBladeAngle2 += 2.5f;
+
+    // Boat movement
+    ehsan_boatPos1 += 0.8f;
+    if (ehsan_boatPos1 > 1000) ehsan_boatPos1 = -150;
+    ehsan_boatPos2 -= 0.6f;
+    if (ehsan_boatPos2 < -150) ehsan_boatPos2 = 1000;
+
+    ehsan_updateRain();
+
+    glutPostRedisplay();
+    glutTimerFunc(16, ehsan_update, 0); // 60 FPS
+}
+
+void ehsan_keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+        case 't': // Toggle train movement
+            ehsan_isTrainMoving = !ehsan_isTrainMoving;
+            // ehsan_toggleTrainSound(); // Not implemented sound
+            break;
+        case 'r': // Toggle rain
+            ehsan_isRaining = !ehsan_isRaining;
+            if (ehsan_isRaining) ehsan_initRain();
+            break;
+        case '+': // Increase time (speed up day/night)
+            ehsan_currentHour += 1.0f;
+            if (ehsan_currentHour >= 24.0f) ehsan_currentHour = 0.0f;
+            break;
+        case '-': // Decrease time
+            ehsan_currentHour -= 1.0f;
+            if (ehsan_currentHour < 0.0f) ehsan_currentHour = 23.0f;
+            break;
+        case 'l': // Toggle lampposts
+            ehsan_lamppostsOn = !ehsan_lamppostsOn;
+            break;
+    }
+    glutPostRedisplay();
+}
+
+
+void ehsan_reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1000, 0, 600);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+// ==============================================================================
+// SCENE 3 FUNCTIONS (Prefix: niloy)
+// ==============================================================================
+
+void niloy_drawRectangle(float x, float y, float width, float height, float r, float g, float b) {
+    glColor3f(r, g, b);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+}
+
+void niloy_drawTree(float x, float y) {
+    niloy_drawRectangle(x + 12, y, 10, 40, 0.5, 0.3, 0.1); // Trunk
+    glColor3f(0.1, 0.7, 0.2); // Leaves
+    drawCircle(x + 17, y + 55, 20);
+    drawCircle(x + 7, y + 50, 18);
+    drawCircle(x + 27, y + 50, 18);
+}
+
+void niloy_drawBridgeTrack() {
+    glColor3f(0.6, 0.6, 0.6); // Main track body
+    glBegin(GL_POLYGON);
+    glVertex2f(0, 270);
+    glVertex2f(1000, 270);
+    glVertex2f(1000, 250);
+    glVertex2f(0, 250);
+    glEnd();
+    glColor3f(0.4, 0.3, 0.2); // Railway sleepers
+    for (int i = 0; i < 1000; i += 20) {
+        glBegin(GL_LINES);
+        glVertex2f(i, 250);
+        glVertex2f(i, 270);
+        glEnd();
+    }
+    glColor3f(0.8, 0.8, 0.8); // Rails
+    glBegin(GL_LINES);
+    glVertex2f(0, 268); glVertex2f(1000, 268);
+    glVertex2f(0, 252); glVertex2f(1000, 252);
+    glEnd();
+}
+
+void niloy_drawBridgeStructure() {
+    glColor3f(0.4, 0.35, 0.3); // Bridge pillars
+    for (int x = 0; x <= 1000; x += 100) {
+        niloy_drawRectangle(x, 150, 20, 100, 0.4, 0.35, 0.3);
+    }
+    niloy_drawRectangle(0, 250, 1000, 20, 0.6, 0.5, 0.4); // Bridge road surface
+}
+
+void niloy_drawCar(float x, float y, float r, float g, float b) {
+    niloy_drawRectangle(x, y + 10, 80, 30, r, g, b); // Car body
+    niloy_drawRectangle(x + 10, y + 40, 60, 20, r * 0.8, g * 0.8, b * 0.8); // Roof
+    glColor3f(0.0, 0.0, 0.0);
+    drawCircle(x + 20, y + 10, 10); // Wheels
+    drawCircle(x + 60, y + 10, 10);
+    // Windows
+    glColor3f(0.7, 0.9, 1.0);
+    niloy_drawRectangle(x + 15, y + 45, 20, 10, 0.7, 0.9, 1.0);
+    niloy_drawRectangle(x + 45, y + 45, 20, 10, 0.7, 0.9, 1.0);
+}
+
+void niloy_drawBus(float x, float y) {
+    float BUS_COLOR_R = 0.9f, BUS_COLOR_G = 0.5f, BUS_COLOR_B = 0.1f;
+    // Main body
+    glColor3f(BUS_COLOR_R, BUS_COLOR_G, BUS_COLOR_B);
+    glBegin(GL_POLYGON);
+    glVertex2f(x, y);
+    glVertex2f(x + 150, y);
+    glVertex2f(x + 150, y + 60);
+    glVertex2f(x + 140, y + 70);
+    glVertex2f(x + 10, y + 70);
+    glVertex2f(x, y + 60);
+    glEnd();
+    // Windows
+    glColor3f(0.7f, 0.9f, 1.0f);
+    for (int i = 0; i < 5; ++i) {
+        niloy_drawRectangle(x + 15 + i * 25, y + 40, 20, 20, 0.7f, 0.9f, 1.0f);
+    }
+    // Front window
+    glBegin(GL_POLYGON);
+    glVertex2f(x + 140, y + 70);
+    glVertex2f(x + 150, y + 60);
+    glVertex2f(x + 150, y + 50);
+    glVertex2f(x + 140, y + 50);
+    glEnd();
+    // Side stripe
+    glColor3f(1.0f, 1.0f, 0.0f);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y + 60);
+    glVertex2f(x + 150, y + 60);
+    glVertex2f(x + 150, y + 55);
+    glVertex2f(x, y + 55);
+    glEnd();
+    // Wheels
+    glColor3f(0.1f, 0.1f, 0.1f);
+    drawCircle(x + 30, y, 15);
+    drawCircle(x + 120, y, 15);
+    // Wheel hubs
+    glColor3f(0.5f, 0.5f, 0.5f);
+    drawCircle(x + 30, y, 8);
+    drawCircle(x + 120, y, 8);
+    // Headlights
+    glColor3f(1.0f, 1.0f, 0.8f);
+    niloy_drawRectangle(x + 145, y + 10, 5, 10, 1.0f, 1.0f, 0.8f);
+}
+
+void niloy_initRain() {
+    niloy_raindrops.clear();
+    for (int i = 0; i < 1000; ++i) {
+        niloy_Raindrop drop;
+        drop.x = rand() % 1000;
+        drop.y = rand() % 600 + 150; // Start drops above visible area
+        drop.speed = 5 + rand() % 10;
+        drop.length = 5 + rand() % 10;
+        niloy_raindrops.push_back(drop);
+    }
+}
+
+void niloy_drawRain() {
+    if (!ehsan_isRaining) return; // Using ehsan_isRaining as there is no specific niloy_isRaining
+
+    glColor3f(0.5, 0.5, 1.0); // Blueish raindrops
+    glBegin(GL_LINES);
+    for (auto& drop : niloy_raindrops) {
+        glVertex2f(drop.x, drop.y);
+        glVertex2f(drop.x - 2, drop.y - drop.length); // Slanted drops
+    }
+    glEnd();
+}
+
+void niloy_updateRain() {
+    if (!ehsan_isRaining) return; // Using ehsan_isRaining as there is no specific niloy_isRaining
+
+    for (auto& drop : niloy_raindrops) {
+        drop.x += 2.0; // Simulate wind
+        drop.y -= drop.speed;
+        if (drop.y < 0) { // Reset if off screen
+            drop.x = rand() % 1000;
+            drop.y = rand() % 600 + 150;
+            drop.speed = 5 + rand() % 10;
+            drop.length = 5 + rand() % 10;
+        }
+    }
+}
+
+void niloy_drawHospital(float x, float y, float width, float height) {
+    niloy_drawRectangle(x, y, width, height, 0.95, 0.95, 0.95); // Hospital body
+    glColor3f(niloy_currentMode == 1 ? 1.0 : 0.5, niloy_currentMode == 1 ? 1.0 : 0.7, niloy_currentMode == 1 ? 0.0 : 0.9); // Windows
+    for (float i = x + 10; i < x + width - 10; i += 20) {
+        for (float j = y + 10; j < y + height - 10; j += 20) {
+            niloy_drawRectangle(i, j, 10, 10, niloy_currentMode == 1 ? 1.0 : 0.5, niloy_currentMode == 1 ? 1.0 : 0.7, niloy_currentMode == 1 ? 0.0 : 0.9);
+        }
+    }
+    glColor3f(0.8, 0.0, 0.0); // Red cross symbol
+    float crossX = x + width / 2 - 5;
+    float crossY = y + height / 2 - 5;
+    niloy_drawRectangle(crossX, crossY, 10, 30, 0.8, 0.0, 0.0); // Vertical bar
+    niloy_drawRectangle(crossX - 10, crossY + 10, 30, 10, 0.8, 0.0, 0.0); // Horizontal bar
+}
+
+
+void niloy_display() {
+    glClearColor(0.6f, 0.8f, 0.9f, 1.0f); // Light blue sky
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Ground
+    niloy_drawRectangle(0, 0, 1000, 200, 0.2f, 0.7f, 0.3f); // Green ground
+
+    niloy_drawBridgeStructure();
+    niloy_drawBridgeTrack();
+
+    // Cars on the road
+    niloy_drawCar(100, 100, 1.0, 0.0, 0.0);
+    niloy_drawCar(400, 100, 0.0, 0.0, 1.0);
+
+    niloy_drawBus(niloy_busX, 210);
+
+    niloy_drawTree(50, 200);
+    niloy_drawTree(250, 200);
+    niloy_drawTree(700, 200);
+
+    niloy_drawHospital(800, 300, 150, 100);
+
+    niloy_drawRain();
+
+    glutSwapBuffers();
+}
+
+void niloy_update(int value) {
+    // Bus movement
+    niloy_busX += 1.0f;
+    if (niloy_busX > 1000) {
+        niloy_busX = -200;
+    }
+
+    niloy_updateRain();
+
+    glutPostRedisplay();
+    glutTimerFunc(16, niloy_update, 0);
+}
+
+void niloy_keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+        case 'm': // Change hospital window mode
+            niloy_currentMode = (niloy_currentMode + 1) % 2;
+            break;
+        case 'r': // Toggle rain
+            ehsan_isRaining = !ehsan_isRaining; // Using ehsan_isRaining for consistency
+            if (ehsan_isRaining) niloy_initRain();
+            break;
+    }
+    glutPostRedisplay();
+}
+
+void niloy_reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1000, 0, 600);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+// ==============================================================================
+// SCENE 4 FUNCTIONS (Prefix: shadhin)
+// ==============================================================================
+
+void shadhin_drawSunMoon() {
+    if (shadhin_isMorning) { // Reddish/Orange sun for morning rise
+        // sunMoonPos goes from 0 (off-screen left) to 0.5 (mid-morning)
+        drawCircle(shadhin_sunMoonPos * 1000, 500, 40, 32, {1.0f, 0.6f, 0.2f}.r, {1.0f, 0.6f, 0.2f}.g, {1.0f, 0.6f, 0.2f}.b); // Orange/Red
+    } else if (shadhin_isDaytime) { // Yellow Sun for daytime, moves from right to left
+        // sunMoonPos goes from 0 (right) to 1 (left)
+        drawCircle(900 - shadhin_sunMoonPos * 800, 500, 40, 32, {1.0f, 0.95f, 0.3f}.r, {1.0f, 0.95f, 0.3f}.g, {1.0f, 0.95f, 0.3f}.b); // Bright Yellow Sun
+    } else { // Night
+        // Moon, moves from left to right
+        drawCircle(shadhin_sunMoonPos * 1000, 500, 35, 32, {0.7f, 0.7f, 0.8f}.r, {0.7f, 0.7f, 0.8f}.g, {0.7f, 0.7f, 0.8f}.b); // Pale blue moon
+    }
+}
+
+
+void shadhin_drawHills() {
+    // Background hills (darker, further away)
+    glColor3f(0.2f, 0.4f, 0.3f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(0, 185);
+    glVertex2f(200, 300);
+    glVertex2f(400, 185);
+    glVertex2f(300, 185);
+    glVertex2f(500, 350);
+    glVertex2f(700, 185);
+    glVertex2f(600, 185);
+    glVertex2f(800, 320);
+    glVertex2f(1000, 185);
+    glEnd();
+}
+
+void shadhin_drawRainbow() {
+    if (!shadhin_showRainbow) return;
+
+    glPushMatrix();
+    glTranslatef(500, 150, 0); // Center of the rainbow
+    glRotatef(shadhin_rainbowAngle, 0, 0, 1);
+
+    float radius = 200.0f;
+    float bandWidth = 10.0f;
+
+    // Red
+    glColor4f(1.0f, 0.0f, 0.0f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f(radius * cos(angle), radius * sin(angle));
+        glVertex2f((radius + bandWidth) * cos(angle), (radius + bandWidth) * sin(angle));
+    }
+    glEnd();
+    // Orange
+    glColor4f(1.0f, 0.5f, 0.0f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f((radius + bandWidth) * cos(angle), (radius + bandWidth) * sin(angle));
+        glVertex2f((radius + 2 * bandWidth) * cos(angle), (radius + 2 * bandWidth) * sin(angle));
+    }
+    glEnd();
+    // Yellow
+    glColor4f(1.0f, 1.0f, 0.0f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f((radius + 2 * bandWidth) * cos(angle), (radius + 2 * bandWidth) * sin(angle));
+        glVertex2f((radius + 3 * bandWidth) * cos(angle), (radius + 3 * bandWidth) * sin(angle));
+    }
+    glEnd();
+    // Green
+    glColor4f(0.0f, 1.0f, 0.0f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f((radius + 3 * bandWidth) * cos(angle), (radius + 3 * bandWidth) * sin(angle));
+        glVertex2f((radius + 4 * bandWidth) * cos(angle), (radius + 4 * bandWidth) * sin(angle));
+    }
+    glEnd();
+    // Blue
+    glColor4f(0.0f, 0.0f, 1.0f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f((radius + 4 * bandWidth) * cos(angle), (radius + 4 * bandWidth) * sin(angle));
+        glVertex2f((radius + 5 * bandWidth) * cos(angle), (radius + 5 * bandWidth) * sin(angle));
+    }
+    glEnd();
+    // Indigo
+    glColor4f(0.29f, 0.0f, 0.51f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f((radius + 5 * bandWidth) * cos(angle), (radius + 5 * bandWidth) * sin(angle));
+        glVertex2f((radius + 6 * bandWidth) * cos(angle), (radius + 6 * bandWidth) * sin(angle));
+    }
+    glEnd();
+    // Violet
+    glColor4f(0.56f, 0.0f, 1.0f, 0.8f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= 180; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f((radius + 6 * bandWidth) * cos(angle), (radius + 6 * bandWidth) * sin(angle));
+        glVertex2f((radius + 7 * bandWidth) * cos(angle), (radius + 7 * bandWidth) * sin(angle));
+    }
+    glEnd();
+
+    glPopMatrix();
+}
+
+void shadhin_rainbowOff(int value) {
+    shadhin_showRainbow = false;
+    glutPostRedisplay();
+}
+
+void shadhin_drawStars() {
+    if (shadhin_isDaytime || shadhin_isMorning) return; // Only show at night
+
+    glColor3f(1.0f, 1.0f, 1.0f);  // White stars
+    glPointSize(2.0f);
+    glBegin(GL_POINTS);
+    int starPositions[][2] = {
+        {100, 550}, {150, 530}, {200, 580}, {250, 520}, {300, 560},
+        {350, 545}, {400, 575}, {450, 510}, {500, 590}, {550, 525},
+        {600, 570}, {650, 535}, {700, 580}, {750, 520}, {800, 550},
+        {850, 530}, {900, 580}, {950, 540}, {990, 560}
+    };
+    for (auto& star : starPositions) {
+        glVertex2i(star[0], star[1]);
+    }
+    glEnd();
+}
+
+void shadhin_drawClouds() {
+    glColor3f(1.0f, 1.0f, 1.0f); // White
+    for (int i = 0; i < 3; ++i) {
+        drawCircle(shadhin_cloudX[i], shadhin_cloudY[i], 30);
+        drawCircle(shadhin_cloudX[i] + 20, shadhin_cloudY[i] - 10, 25);
+        drawCircle(shadhin_cloudX[i] - 20, shadhin_cloudY[i] - 5, 20);
+    }
+}
+
+
+void shadhin_drawMountains() {
+    glColor3f(0.4f, 0.3f, 0.2f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(0, 185);
+    glVertex2f(200, 350);
+    glVertex2f(400, 185);
+
+    glVertex2f(300, 185);
+    glVertex2f(550, 400);
+    glVertex2f(800, 185);
+
+    glVertex2f(700, 185);
+    glVertex2f(900, 380);
+    glVertex2f(1000, 185);
+    glEnd();
+}
+
+void shadhin_drawRiver() {
+    glColor3f(0.2f, 0.4f, 0.8f);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 0);
+    glVertex2f(1000, 0);
+    glVertex2f(1000, 170);
+    glVertex2f(0, 170);
+    glEnd();
+}
+
+void shadhin_drawRoad() {
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 170);
+    glVertex2f(1000, 170);
+    glVertex2f(1000, 250);
+    glVertex2f(0, 250);
+    glEnd();
+    // Road markings
+    glColor3f(1.0f, 1.0f, 0.0f);
+    glLineWidth(2.0f);
+    for (int i = 0; i < 1000; i += 40) {
+        glBegin(GL_LINES);
+        glVertex2f(i, 210);
+        glVertex2f(i + 20, 210);
+        glEnd();
+    }
+}
+
+void shadhin_drawBridge() {
+    glColor3f(0.5f, 0.4f, 0.3f);
+    glBegin(GL_QUADS);
+    glVertex2f(200, 170);
+    glVertex2f(800, 170);
+    glVertex2f(800, 250);
+    glVertex2f(200, 250);
+    glEnd();
+    // Pillars
+    for (int i = 220; i <= 780; i += 80) {
+        glColor3f(0.4f, 0.3f, 0.2f);
+        glBegin(GL_QUADS);
+        glVertex2f(i, 0);
+        glVertex2f(i + 20, 0);
+        glVertex2f(i + 20, 170);
+        glVertex2f(i, 170);
+        glEnd();
+    }
+}
+
+void shadhin_drawTrain() {
+    // Train body
+    glColor3f(0.8f, 0.1f, 0.1f); // Red
+    glBegin(GL_QUADS);
+    glVertex2f(shadhin_trainX, 260);
+    glVertex2f(shadhin_trainX + 100, 260);
+    glVertex2f(shadhin_trainX + 100, 310);
+    glVertex2f(shadhin_trainX, 310);
+    glEnd();
+    // Wheels
+    glColor3f(0.1f, 0.1f, 0.1f);
+    drawCircle(shadhin_trainX + 25, 260, 10);
+    drawCircle(shadhin_trainX + 75, 260, 10);
+}
+
+void shadhin_drawTrainTrack() {
+    glColor3f(0.5f, 0.5f, 0.5f);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 250);
+    glVertex2f(1000, 250);
+    glVertex2f(1000, 270);
+    glVertex2f(0, 270);
+    glEnd();
+    // Sleepers
+    glColor3f(0.4f, 0.2f, 0.0f);
+    for (int i = 0; i < 1000; i += 20) {
+        glBegin(GL_LINES);
+        glVertex2f(i, 250);
+        glVertex2f(i, 270);
+        glEnd();
+    }
+    // Rails
+    glColor3f(0.8f, 0.8f, 0.8f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
+    glVertex2f(0, 268); glVertex2f(1000, 268);
+    glVertex2f(0, 252); glVertex2f(1000, 252);
+    glEnd();
+}
+
+void shadhin_drawTrainGate() {
+    // Gate post
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glBegin(GL_QUADS);
+    glVertex2f(300, 270);
+    glVertex2f(310, 270);
+    glVertex2f(310, 320);
+    glVertex2f(300, 320);
+    glEnd();
+    // Gate arm (horizontal)
+    glColor3f(0.8f, 0.1f, 0.1f);
+    glBegin(GL_QUADS);
+    glVertex2f(310, 310);
+    glVertex2f(450, 310);
+    glVertex2f(450, 320);
+    glVertex2f(310, 320);
+    glEnd();
+}
+
+void shadhin_drawAirplane() {
+    glColor3f(0.7f, 0.7f, 0.7f);
+    // Body
+    glBegin(GL_POLYGON);
+    glVertex2f(shadhin_airplaneX, shadhin_airplaneY);
+    glVertex2f(shadhin_airplaneX + 80, shadhin_airplaneY);
+    glVertex2f(shadhin_airplaneX + 100, shadhin_airplaneY + 20);
+    glVertex2f(shadhin_airplaneX + 20, shadhin_airplaneY + 20);
+    glEnd();
+    // Wings
+    glBegin(GL_TRIANGLES);
+    glVertex2f(shadhin_airplaneX + 40, shadhin_airplaneY + 20);
+    glVertex2f(shadhin_airplaneX + 60, shadhin_airplaneY + 20);
+    glVertex2f(shadhin_airplaneX + 50, shadhin_airplaneY + 50);
+    glEnd();
+    glBegin(GL_TRIANGLES);
+    glVertex2f(shadhin_airplaneX + 40, shadhin_airplaneY);
+    glVertex2f(shadhin_airplaneX + 60, shadhin_airplaneY);
+    glVertex2f(shadhin_airplaneX + 50, shadhin_airplaneY - 30);
+    glEnd();
+    // Tail
+    glBegin(GL_TRIANGLES);
+    glVertex2f(shadhin_airplaneX, shadhin_airplaneY + 5);
+    glVertex2f(shadhin_airplaneX - 10, shadhin_airplaneY + 15);
+    glVertex2f(shadhin_airplaneX - 10, shadhin_airplaneY + 5);
+    glEnd();
+}
+
+void shadhin_drawHotAirBalloon() {
+    glColor3f(1.0f, 0.5f, 0.0f); // Orange balloon
+    drawCircle(shadhin_hotAirBalloonX, shadhin_hotAirBalloonY + 50, 40);
+    // Basket
+    glColor3f(0.6f, 0.4f, 0.2f); // Brown
+    glBegin(GL_QUADS);
+    glVertex2f(shadhin_hotAirBalloonX - 15, shadhin_hotAirBalloonY - 10);
+    glVertex2f(shadhin_hotAirBalloonX + 15, shadhin_hotAirBalloonY - 10);
+    glVertex2f(shadhin_hotAirBalloonX + 10, shadhin_hotAirBalloonY);
+    glVertex2f(shadhin_hotAirBalloonX - 10, shadhin_hotAirBalloonY);
+    glEnd();
+    // Ropes
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glLineWidth(1.0f);
+    glBegin(GL_LINES);
+    glVertex2f(shadhin_hotAirBalloonX - 10, shadhin_hotAirBalloonY);
+    glVertex2f(shadhin_hotAirBalloonX - 30, shadhin_hotAirBalloonY + 20);
+    glVertex2f(shadhin_hotAirBalloonX + 10, shadhin_hotAirBalloonY);
+    glVertex2f(shadhin_hotAirBalloonX + 30, shadhin_hotAirBalloonY + 20);
+    glEnd();
+}
+
+void shadhin_drawLightning() {
+    if (!shadhin_isLightning) return;
+    glColor4f(0.9f, 0.9f, 1.0f, (float)shadhin_lightningTimer / shadhin_LIGHTNING_DURATION);
+    glBegin(GL_TRIANGLE_STRIP);
+    glVertex2f(400, 600);
+    glVertex2f(410, 600);
+    glVertex2f(420, 500);
+    glVertex2f(410, 500);
+    glVertex2f(430, 450);
+    glVertex2f(420, 450);
+    glVertex2f(440, 350);
+    glVertex2f(430, 350);
+    glEnd();
+}
+
+void shadhin_lightningTimerFunc(int value) {
+    if (shadhin_isLightning) {
+        shadhin_lightningTimer--;
+        if (shadhin_lightningTimer <= 0) {
+            shadhin_isLightning = false;
+        }
+        glutPostRedisplay();
+        glutTimerFunc(100, shadhin_lightningTimerFunc, 0);
+    }
+}
+
+void shadhin_playTrainSound() {
+    // std::cout << "Train sound playing!" << std::endl; // Placeholder for sound
+    shadhin_isTrainSoundPlaying = true;
+}
+
+void shadhin_stopTrainSound() {
+    // std::cout << "Train sound stopped." << std::endl; // Placeholder for sound
+    shadhin_isTrainSoundPlaying = false;
+}
+
+void shadhin_playTrainWhistle() {
+    // std::cout << "Train whistle!" << std::endl; // Placeholder for sound
+}
+
+void shadhin_toggleTrainSound() {
+    if (shadhin_isTrainSoundPlaying) {
+        shadhin_stopTrainSound();
+    } else {
+        shadhin_playTrainSound();
+    }
+}
+
+void shadhin_toggleTrainMovement() {
+    shadhin_trainSpeed = (shadhin_trainSpeed == 0.0f) ? 0.5f : 0.0f; // Toggle speed
+}
+
+
+void shadhin_drawSeatingZones() {
+    // Seating zone 1 (left side) - Green grassy area
+    if (shadhin_isMorning) {
+        glColor3f(0.3f, 0.5f, 0.2f); // Morning green
+    } else if (shadhin_isDaytime) {
+        glColor3f(0.4f, 0.7f, 0.3f); // Day bright green
+    } else {
+        glColor3f(0.2f, 0.4f, 0.1f); // Night dark green
+    }
+    glBegin(GL_QUADS);
+    glVertex2f(50, 170);
+    glVertex2f(150, 170);
+    glVertex2f(150, 230);
+    glVertex2f(50, 230);
+    glEnd();
+    // Seating zone 2 (right side) - Sandy area
+    glColor3f(0.8f, 0.7f, 0.5f);
+    glBegin(GL_QUADS);
+    glVertex2f(700, 170);
+    glVertex2f(900, 170);
+    glVertex2f(900, 230);
+    glVertex2f(700, 230);
+    glEnd();
+}
+
+void shadhin_drawBusStop() {
+    // Roof
+    glColor3f(0.4f, 0.4f, 0.4f);
+    glBegin(GL_QUADS);
+    glVertex2f(180, 230);
+    glVertex2f(280, 230);
+    glVertex2f(270, 250);
+    glVertex2f(190, 250);
+    glEnd();
+    // Pillars
+    glColor3f(0.6f, 0.6f, 0.6f);
+    glBegin(GL_QUADS);
+    glVertex2f(190, 170);
+    glVertex2f(200, 170);
+    glVertex2f(200, 230);
+    glVertex2f(190, 230);
+    glEnd();
+    glBegin(GL_QUADS);
+    glVertex2f(260, 170);
+    glVertex2f(270, 170);
+    glVertex2f(270, 230);
+    glVertex2f(260, 230);
+    glEnd();
+}
+
+void shadhin_drawShoppingMall() {
+    // Base building
+    glColor3f(0.7f, 0.7f, 0.8f);
+    glBegin(GL_QUADS);
+    glVertex2f(350, 170);
+    glVertex2f(650, 170);
+    glVertex2f(650, 350);
+    glVertex2f(350, 350);
+    glEnd();
+    // Windows
+    glColor3f(0.5f, 0.7f, 0.9f);
+    for (int i = 0; i < 3; ++i) {
+        drawRectangle(370 + i * 100, 200, 40, 60, 0.5f, 0.7f, 0.9f);
+    }
+    // Entrance
+    glColor3f(0.3f, 0.3f, 0.3f);
+    drawRectangle(475, 170, 50, 70, 0.3f, 0.3f, 0.3f);
+}
+
+void shadhin_drawStadium() {
+    glColor3f(0.8f, 0.8f, 0.8f);
+    // Outer oval
+    glBegin(GL_TRIANGLE_FAN);
+    for (int i = 0; i <= 360; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f(500 + 200 * cos(angle), 100 + 80 * sin(angle));
+    }
+    glEnd();
+    glColor3f(0.2f, 0.6f, 0.2f);
+    // Inner field
+    glBegin(GL_TRIANGLE_FAN);
+    for (int i = 0; i <= 360; ++i) {
+        float angle = i * 3.1415926535f / 180.0f;
+        glVertex2f(500 + 150 * cos(angle), 100 + 60 * sin(angle));
+    }
+    glEnd();
+}
+
+void shadhin_drawSkyscraper(float x, float y, float height) {
+    glColor3f(0.3f, 0.3f, 0.5f); // Dark blue-grey
+    drawRectangle(x, y, 80, height, 0.3f, 0.3f, 0.5f);
+    // Windows
+    glColor3f(0.6f, 0.8f, 1.0f);
+    for (int i = 0; i < height / 20; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            drawRectangle(x + 10 + j * 40, y + 10 + i * 20, 20, 10, 0.6f, 0.8f, 1.0f);
+        }
+    }
+}
+
+void shadhin_drawPond() {
+    glColor3f(0.2f, 0.5f, 0.7f);
+    drawCircle(750, 100, 60);
+    // Ducks
+    glColor3f(1.0f, 1.0f, 1.0f);
+    drawCircle(720, 100, 5);
+    drawCircle(730, 100, 5);
+    drawCircle(725, 105, 3); // Head
+    glColor3f(1.0f, 0.5f, 0.0f);
+    drawCircle(727, 106, 1); // Beak
+}
+
+void shadhin_drawFountain() {
+    glColor3f(0.7f, 0.7f, 0.7f);
+    drawCircle(850, 170, 20); // Base
+    glColor3f(0.5f, 0.7f, 0.9f);
+    glBegin(GL_LINES);
+    for (int i = 0; i < 10; ++i) {
+        glVertex2f(850, 170);
+        glVertex2f(850 + 10 * cos(i * 36), 170 + 30 + 10 * sin(i * 36));
+    }
+    glEnd();
+}
+
+void shadhin_drawPath() {
+    glColor3f(0.6f, 0.4f, 0.2f);
+    glBegin(GL_QUADS);
+    glVertex2f(0, 170);
+    glVertex2f(1000, 170);
+    glVertex2f(1000, 185);
+    glVertex2f(0, 185);
+    glEnd();
+}
+
+void shadhin_drawLampPost(float x, float y) {
+    glColor3f(0.3f, 0.3f, 0.3f);
+    drawRectangle(x, y, 5, 80, 0.3f, 0.3f, 0.3f);
+    glColor3f(1.0f, 1.0f, 0.8f); // Light
+    drawCircle(x + 2, y + 85, 8);
+}
+
+void shadhin_drawTrafficLight(float x, float y) {
+    glColor3f(0.2f, 0.2f, 0.2f);
+    drawRectangle(x, y, 20, 60, 0.2f, 0.2f, 0.2f);
+    // Red light
+    glColor3f(1.0f, 0.0f, 0.0f);
+    drawCircle(x + 10, y + 50, 7);
+    // Yellow light
+    glColor3f(1.0f, 1.0f, 0.0f);
+    drawCircle(x + 10, y + 30, 7);
+    // Green light
+    glColor3f(0.0f, 1.0f, 0.0f);
+    drawCircle(x + 10, y + 10, 7);
+}
+
+void shadhin_drawBuilding_4(float x, float y, float width, float height) {
+    drawRectangle(x, y, width, height, 0.5, 0.5, 0.5); // Building body
+    glColor3f(shadhin_isDaytime || shadhin_isMorning ? 0.7 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 0.9 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 1.0 : 0.2); // Windows
+    float y_win = y + 5;
+    for (int i = 0; i < (height / 20) - 1; ++i) {
+        drawRectangle(x + 5, y_win, 20, 15, shadhin_isDaytime || shadhin_isMorning ? 0.7 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 0.9 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 1.0 : 0.2);
+        drawRectangle(x + 25, y_win, 20, 15, shadhin_isDaytime || shadhin_isMorning ? 0.7 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 0.9 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 1.0 : 0.2);
+        drawRectangle(x + 50, y_win, 20, 15, shadhin_isDaytime || shadhin_isMorning ? 0.7 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 0.9 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 1.0 : 0.2);
+        drawRectangle(x + 70, y_win, 20, 15, shadhin_isDaytime || shadhin_isMorning ? 0.7 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 0.9 : 0.2, shadhin_isDaytime || shadhin_isMorning ? 1.0 : 0.2);
+        y_win += 20;
+    }
+}
+
+
+void shadhin_initRain() {
+    shadhin_raindrops.clear();
+    for (int i = 0; i < 500; ++i) {
+        shadhin_Raindrop drop;
+        drop.x = rand() % 1000;
+        drop.y = rand() % 600 + 600; // Start drops above visible area
+        drop.speed = 5 + rand() % 10;
+        drop.length = 5 + rand() % 10;
+        shadhin_raindrops.push_back(drop);
+    }
+}
+
+void shadhin_drawRain() {
+    if (!shadhin_isRaining) return;
+    glColor4f(0.5, 0.5, 1.0, 0.8); // Blueish, semi-transparent
+    glBegin(GL_LINES);
+    for (auto& drop : shadhin_raindrops) {
+        glVertex2f(drop.x, drop.y);
+        glVertex2f(drop.x, drop.y - drop.length);
+    }
+    glEnd();
+}
+
+void shadhin_updateRain() {
+    if (!shadhin_isRaining) return;
+    for (auto& drop : shadhin_raindrops) {
+        drop.y -= drop.speed;
+        if (drop.y < 0) { // Reset if off screen
+            drop.x = rand() % 1000;
+            drop.y = rand() % 600 + 600;
+            drop.speed = 5 + rand() % 10;
+            drop.length = 5 + rand() % 10;
+        }
+    }
+}
+
+
+void shadhin_display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Sky gradient
+    glBegin(GL_QUADS);
+    // Determine sky color based on morning, day, or night
+    if (shadhin_isMorning) {
+        glColor3fv(&shadhin_skyMorning.r); // Top color (darker morning sky)
+    } else {
+        glColor3fv(shadhin_isDaytime ? &shadhin_skyDay.r : &shadhin_skyNight.r); // Top color
+    }
+    glVertex2f(0, 600);
+    glVertex2f(1000, 600);
+    // Adjust bottom sky color for morning (slightly lighter than top)
+    if (shadhin_isMorning) {
+        glColor3f(shadhin_skyMorning.r * 1.2f, shadhin_skyMorning.g * 1.2f, shadhin_skyMorning.b * 1.2f);
+    } else {
+        glColor3f(shadhin_isDaytime ? shadhin_skyDay.r * 0.8f : shadhin_skyNight.r * 1.2f, shadhin_isDaytime ? shadhin_skyDay.g * 0.8f : shadhin_skyNight.g * 1.2f, shadhin_isDaytime ? shadhin_skyDay.b * 0.8f : shadhin_skyNight.b * 1.2f);
+    }
+    glVertex2f(1000, 185);
+    glVertex2f(0, 185);
+    glEnd();
+
+    // --- Lightning Flash Drawing ---
+    if (shadhin_isLightning) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // White-blue flash that covers the whole sky
+        // Alpha fades out from 1.0 to 0.0 as lightningTimer decreases
+        float alpha = (float)shadhin_lightningTimer / shadhin_LIGHTNING_DURATION;
+        glColor4f(0.9f, 0.9f, 1.0f, alpha); // Mostly white, slightly blue, with fading alpha
+        glBegin(GL_QUADS);
+        glVertex2f(0, 185); // Start from just above the ground/city level
+        glVertex2f(1000, 185);
+        glVertex2f(1000, 600); // Up to the top of the screen
+        glVertex2f(0, 600);
+        glEnd();
+        glDisable(GL_BLEND);
+    }
+    // --- End Lightning Flash Drawing ---
+
+    shadhin_drawSunMoon();
+    shadhin_drawHills();
+    shadhin_drawRainbow();
+    shadhin_drawStars();
+    shadhin_drawClouds();
+    shadhin_drawMountains();
+
+    // Ground for the city/structures (Draw this *before* things on top of it)
+    glBegin(GL_QUADS);
+    // Use morning ground color if isMorning is true
+    if (shadhin_isMorning) {
+        glColor3fv(&shadhin_groundMorning.r);
+    } else {
+        glColor3fv(shadhin_isDaytime ? &shadhin_groundDay.r : &shadhin_groundNight.r);
+    }
+    glVertex2f(0, 170);
+    glVertex2f(1000, 170);
+    glVertex2f(1000, 185);
+    glVertex2f(0, 185);
+    glEnd();
+
+    shadhin_drawRiver();
+    shadhin_drawRoad();
+    shadhin_drawBridge(); // This is the road bridge over the river
+
+    shadhin_drawTrainTrack();
+    shadhin_drawTrain();
+    shadhin_drawTrainGate();
+
+    shadhin_drawAirplane();
+    shadhin_drawHotAirBalloon();
+
+    shadhin_drawLampPost(50, 185);
+    shadhin_drawLampPost(950, 185);
+    shadhin_drawTrafficLight(300, 185);
+
+    shadhin_drawBuilding_4(100, 185, 100, 100); // Small building
+    shadhin_drawSkyscraper(800, 185, 200); // Skyscraper
+
+    shadhin_drawSeatingZones();
+    shadhin_drawBusStop();
+    shadhin_drawShoppingMall();
+    shadhin_drawStadium();
+    shadhin_drawPond();
+    shadhin_drawFountain();
+    shadhin_drawPath();
+
+    shadhin_drawRain();
+
+    glutSwapBuffers();
+}
+
+void shadhin_update(int value) {
+    // Sun/Moon movement for day/night cycle
+    if (shadhin_isMorning) {
+        shadhin_sunMoonPos += 0.001f; // Slowly rise
+        if (shadhin_sunMoonPos >= 0.5f) {
+            shadhin_sunMoonPos = 0.5f;
+            shadhin_isMorning = false;
+            shadhin_isDaytime = true;
+        }
+    } else if (shadhin_isDaytime) {
+        shadhin_sunMoonPos += 0.0005f; // Slowly move across the sky
+        if (shadhin_sunMoonPos >= 1.0f) {
+            shadhin_sunMoonPos = 0.0f;
+            shadhin_isDaytime = false;
+            // shadhin_isMorning = true; // Could loop back to morning or directly to night
+        }
+    } else { // Night
+        shadhin_sunMoonPos += 0.0005f;
+        if (shadhin_sunMoonPos >= 1.0f) {
+            shadhin_sunMoonPos = 0.0f;
+            shadhin_isMorning = true; // Start morning after night
+        }
+    }
+
+    // Cloud movement
+    for (int i = 0; i < 3; ++i) {
+        shadhin_cloudX[i] += 0.5f;
+        if (shadhin_cloudX[i] > 1000) shadhin_cloudX[i] = -100;
+    }
+
+    // Train movement
+    shadhin_trainX += shadhin_trainSpeed;
+    if (shadhin_trainX > 1000) shadhin_trainX = -200;
+
+    // Airplane movement
+    shadhin_airplaneX -= 1.0f;
+    if (shadhin_airplaneX < -100) shadhin_airplaneX = 1100;
+
+    // Hot Air Balloon movement
+    shadhin_hotAirBalloonX += 0.2f;
+    shadhin_hotAirBalloonY += 0.1f;
+    if (shadhin_hotAirBalloonX > 1100 || shadhin_hotAirBalloonY > 700) {
+        shadhin_hotAirBalloonX = -200;
+        shadhin_hotAirBalloonY = 300;
+    }
+
+    // Windmill rotation
+    shadhin_windmillAngle += 1.0f;
+
+    shadhin_updateRain();
+
+    glutPostRedisplay();
+    glutTimerFunc(16, shadhin_update, 0);
+}
+
+
+void shadhin_keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+        case 't': // Toggle train movement
+            shadhin_toggleTrainMovement();
+            break;
+        case 'r': // Show rainbow
+            shadhin_showRainbow = true;
+            glutTimerFunc(3000, shadhin_rainbowOff, 0); // Hide rainbow after 3 seconds
+            break;
+        case 'l': // Trigger lightning
+            shadhin_isLightning = true;
+            shadhin_lightningTimer = shadhin_LIGHTNING_DURATION;
+            glutTimerFunc(100, shadhin_lightningTimerFunc, 0);
+            break;
+        case 's': // Toggle day/night cycle
+            if (shadhin_isDaytime) {
+                shadhin_isDaytime = false;
+                shadhin_isMorning = false;
+                shadhin_sunMoonPos = 0.0f; // Reset for night
+            } else {
+                shadhin_isMorning = true;
+                shadhin_isDaytime = false;
+                shadhin_sunMoonPos = 0.0f; // Reset for morning
+            }
+            break;
+        case 'k': // Toggle rain
+            shadhin_isRaining = !shadhin_isRaining;
+            if (shadhin_isRaining) shadhin_initRain();
+            break;
+    }
+    glutPostRedisplay(); // Request a redraw after keyboard input
+}
+
+void shadhin_mouse(int button, int state, int x, int y) {
+    if (state == GLUT_DOWN) {
+        if (button == GLUT_RIGHT_BUTTON) {
+            shadhin_isRaining = true;
+        } else if (button == GLUT_LEFT_BUTTON) {
+            shadhin_isRaining = false;
+        }
+    }
+}
+
+
+void shadhin_reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1000, 0, 600); // Set up 2D orthographic projection
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+// ==============================================================================
+// MERGED SCENE LOGIC
+// ==============================================================================
+
+void master_display() {
+    switch (currentScene) {
+        case 1:
+            ershad_display();
+            break;
+        case 2:
+            ehsan_display();
+            break;
+        case 3:
+            niloy_display();
+            break;
+        case 4:
+            shadhin_display();
+            break;
+        default:
+            // Fallback or error display
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glColor3f(1.0f, 1.0f, 1.0f);
+            glRasterPos2f(400, 300);
+            std::string msg = "Press 1, 2, 3, or 4 to select a scene.";
+            for (char c : msg) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
+            glutSwapBuffers();
+            break;
+    }
+}
+
+void master_keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+        case '1':
+            currentScene = 1;
+            glutTimerFunc(16, ershad_update, 0); // Start timer for Scene 1
+            break;
+        case '2':
+            currentScene = 2;
+            glutTimerFunc(16, ehsan_update, 0); // Start timer for Scene 2
+            ehsan_initRain(); // Initialize rain for scene 2 if selected
+            break;
+        case '3':
+            currentScene = 3;
+            glutTimerFunc(16, niloy_update, 0); // Start timer for Scene 3
+            niloy_initRain(); // Initialize rain for scene 3 if selected
+            break;
+        case '4':
+            currentScene = 4;
+            glutTimerFunc(16, shadhin_update, 0); // Start timer for Scene 4
+            shadhin_initRain(); // Initialize rain for scene 4 if selected
+            break;
+        default:
+            // Pass key events to the currently active scene's keyboard handler
+            if (currentScene == 1) ershad_keyboard(key, x, y);
+            else if (currentScene == 2) ehsan_keyboard(key, x, y);
+            else if (currentScene == 3) niloy_keyboard(key, x, y);
+            else if (currentScene == 4) shadhin_keyboard(key, x, y);
+            break;
+    }
+    glutPostRedisplay();
+}
+
+void master_mouse(int button, int state, int x, int y) {
+    if (currentScene == 4) { // Only scene 4 has mouse interaction in the provided code
+        shadhin_mouse(button, state, x, y);
+    }
+    glutPostRedisplay();
+}
+
+void master_reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1000, 0, 600);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+    glutInitWindowSize(1000, 600);
+    glutCreateWindow("Merged Animated Scene");
+
+    glutDisplayFunc(master_display);
+    glutKeyboardFunc(master_keyboard);
+    glutMouseFunc(master_mouse); // Register mouse function
+    glutReshapeFunc(master_reshape);
+
+    // Initial timer for the default scene (Scene 1)
+    glutTimerFunc(16, ershad_update, 0);
+
+    glutMainLoop();
+    return 0;
+}
